@@ -1,3 +1,14 @@
+.settings
+.DS_Store
+.documenter_local_last_run
+
+/.idea
+*.iml
+.classpath
+.project
+
+.java-version
+
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -9,3 +20,5 @@ buildNumber.properties
 .mvn/timing.properties
 # https://github.com/takari/maven-wrapper#usage-without-binary-jar
 .mvn/wrapper/maven-wrapper.jar
+.flattened-pom.xml
+
