@@ -25,14 +25,18 @@ import java.util.List;
 public abstract class TableProcessor {
 
   protected final TableMetadata table;
-  protected final SchemaSettings settings;
+  protected final MigrationSettings settings;
   protected final List<ExportedColumn> exportedColumns;
 
   public TableProcessor(
-      TableMetadata table, SchemaSettings settings, List<ExportedColumn> exportedColumns) {
+      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
     this.table = table;
     this.settings = settings;
     this.exportedColumns = exportedColumns;
+  }
+
+  public String getFullyQualifiedTableName() {
+    return String.format("%s.%s", table.getKeyspace().asCql(true), table.getName().asCql(true));
   }
 
   protected String buildExportQuery() {
@@ -78,9 +82,11 @@ public abstract class TableProcessor {
     while (cols.hasNext()) {
       ExportedColumn exportedColumn = cols.next();
       if (exportedColumn.writetime != null) {
+        assert singleWritetime == null;
         singleWritetime = exportedColumn.writetime;
       }
       if (exportedColumn.ttl != null) {
+        assert singleTtl == null;
         singleTtl = exportedColumn.ttl;
       }
       String name = escape(exportedColumn.col.getName());
@@ -155,7 +161,7 @@ public abstract class TableProcessor {
         builder.append(" AND TTL :");
         builder.append(escape(exportedColumn.ttl));
       }
-      builder.append("); ");
+      builder.append("; ");
     }
     builder.append("APPLY BATCH\"");
     return builder.toString();
@@ -168,15 +174,15 @@ public abstract class TableProcessor {
       ExportedColumn exportedColumn = cols.next();
       builder.append(escape(exportedColumn.col.getName()));
       if (exportedColumn.writetime != null) {
-        builder.append(", ");
+        builder.append(",");
         builder.append(escape(exportedColumn.writetime));
       }
       if (exportedColumn.ttl != null) {
-        builder.append(", ");
+        builder.append(",");
         builder.append(escape(exportedColumn.ttl));
       }
       if (cols.hasNext()) {
-        builder.append(", ");
+        builder.append(",");
       }
     }
     builder.append("\"");
@@ -195,7 +201,11 @@ public abstract class TableProcessor {
     return regularCols;
   }
 
-  protected abstract String escape(CqlIdentifier id);
+  protected String escape(CqlIdentifier id) {
+    return escape(id.asCql(true));
+  }
+
+  protected abstract String escape(String id);
 
   protected abstract String getImportDefaultTimestamp();
 }

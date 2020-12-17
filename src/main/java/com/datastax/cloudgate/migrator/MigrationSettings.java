@@ -16,21 +16,21 @@
 package com.datastax.cloudgate.migrator;
 
 import com.datastax.oss.driver.api.core.ConsistencyLevel;
-import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
-import com.datastax.oss.driver.shaded.guava.common.base.Splitter;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
-public class SchemaSettings {
+public class MigrationSettings {
 
-  // Import settings
+  // Export settings
 
   private HostAndPort exportHostAndPort = HostAndPort.fromParts("127.0.0.1", 9042);
   private InetSocketAddress exportHostAddress =
@@ -44,9 +44,11 @@ public class SchemaSettings {
   private String exportMaxConcurrentQueries = "AUTO";
   private String exportSplits = "8C";
   private ConsistencyLevel exportConsistency = ConsistencyLevel.LOCAL_QUORUM;
-  private List<CqlIdentifier> exportKeyspaces = new ArrayList<>();
+  private Pattern exportKeyspaces = Pattern.compile("^(?!system|dse|OpsCenter)\\w+$");
+  private Pattern exportTables = Pattern.compile(".*");
+  private int exportMaxConcurrentOps = 1;
 
-  // Export settings
+  // Import settings
 
   private HostAndPort importHostAndPort = HostAndPort.fromParts("127.0.0.1", 9042);
   private InetSocketAddress importHostAddress =
@@ -58,15 +60,20 @@ public class SchemaSettings {
   private String importMaxConcurrentQueries = "AUTO";
   private ConsistencyLevel importConsistency = ConsistencyLevel.LOCAL_QUORUM;
   private long importDefaultTimestamp = 0;
+  private int importMaxConcurrentOps = 1;
 
   // DSBulk settings
 
+  private boolean dsbulkEmbedded = false;
   private String dsbulkCmd = "dsbulk";
-  private Path dsbulkLogDir = Paths.get("export").normalize().toAbsolutePath();
+  private Path dsbulkLogDir = Paths.get("logs").normalize().toAbsolutePath();
+  private Path dsbulkWorkingDir;
 
-  public SchemaSettings(String[] args) throws IOException {
+  // Internal settings
 
-    Iterator<String> it = Arrays.asList(args).iterator();
+  public MigrationSettings(List<String> args) throws IOException {
+
+    Iterator<String> it = args.iterator();
     while (it.hasNext()) {
       String arg = it.next();
 
@@ -105,10 +112,13 @@ public class SchemaSettings {
           exportConsistency = DefaultConsistencyLevel.valueOf(it.next());
           break;
         case "--export.keyspaces":
-          exportKeyspaces =
-              Splitter.on(",").trimResults().splitToList(it.next()).stream()
-                  .map(CqlIdentifier::fromInternal)
-                  .collect(Collectors.toList());
+          exportKeyspaces = Pattern.compile(it.next());
+          break;
+        case "--export.tables":
+          exportTables = Pattern.compile(it.next());
+          break;
+        case "--export.maxConcurrentOps":
+          exportMaxConcurrentOps = Integer.parseInt(it.next());
           break;
 
         case "--import.host":
@@ -138,12 +148,21 @@ public class SchemaSettings {
         case "--import.timestamp":
           importDefaultTimestamp = Long.parseLong(it.next());
           break;
+        case "--import.maxConcurrentOps":
+          importMaxConcurrentOps = Integer.parseInt(it.next());
+          break;
 
+        case "--dsbulk.embedded":
+          dsbulkEmbedded = Boolean.parseBoolean(it.next());
+          break;
         case "--dsbulk.cmd":
           dsbulkCmd = it.next();
           break;
         case "--dsbulk.logs":
           dsbulkLogDir = Paths.get(it.next()).normalize().toAbsolutePath();
+          break;
+        case "--dsbulk.workingDir":
+          dsbulkWorkingDir = Paths.get(it.next()).normalize().toAbsolutePath();
           break;
 
         default:
@@ -156,7 +175,7 @@ public class SchemaSettings {
     checkFile(importBundle);
   }
 
-  private void checkDirectory(Path dir, String arg) throws IOException {
+  private void checkDirectory(Path dir, String arg) {
     if (Files.exists(dir) && !Files.isDirectory(dir)) {
       throw new IllegalArgumentException("Parameter " + arg + ": is not a directory: " + dir);
     } else if (Files.exists(dir) && !Files.isWritable(dir)) {
@@ -215,8 +234,12 @@ public class SchemaSettings {
     return exportConsistency;
   }
 
-  public List<CqlIdentifier> getExportKeyspaces() {
+  public Pattern getExportKeyspaces() {
     return exportKeyspaces;
+  }
+
+  public Pattern getExportTables() {
+    return exportTables;
   }
 
   public String getImportHostString() {
@@ -261,5 +284,21 @@ public class SchemaSettings {
 
   public String getDsbulkCmd() {
     return dsbulkCmd;
+  }
+
+  public Optional<Path> getDsbulkWorkingDir() {
+    return Optional.ofNullable(dsbulkWorkingDir);
+  }
+
+  public int getExportMaxConcurrentOps() {
+    return exportMaxConcurrentOps;
+  }
+
+  public int getImportMaxConcurrentOps() {
+    return importMaxConcurrentOps;
+  }
+
+  public boolean isDsbulkEmbedded() {
+    return dsbulkEmbedded;
   }
 }

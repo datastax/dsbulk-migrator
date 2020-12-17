@@ -13,16 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator;
+package com.datastax.cloudgate.migrator.direct;
 
+import com.datastax.cloudgate.migrator.ExportedColumn;
+import com.datastax.cloudgate.migrator.MigrationSettings;
+import com.datastax.cloudgate.migrator.TableProcessorFactory;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.util.List;
 
-public class TableGeneratorFactory extends TableProcessorFactory<TableGenerator> {
+public class TableMigratorFactory extends TableProcessorFactory<TableMigrator> {
 
   @Override
-  protected TableGenerator create(
-      TableMetadata table, SchemaSettings settings, List<ExportedColumn> exportedColumns) {
-    return new TableGenerator(table, settings, exportedColumns);
+  protected TableMigrator create(
+      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
+    if (settings.isDsbulkEmbedded()) {
+      return new EmbeddedTableMigrator(table, settings, exportedColumns);
+    } else {
+      return new ExternalTableMigrator(table, settings, exportedColumns);
+    }
   }
 }

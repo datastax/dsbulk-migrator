@@ -13,16 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator;
+package com.datastax.cloudgate.migrator.direct;
 
-import com.datastax.oss.dsbulk.runner.ExitStatus;
+public class TableMigrationReport {
 
-public class UnexpectedExitStatusException extends RuntimeException {
-
+  private final TableMigrator migrator;
   private final ExitStatus status;
+  private final String operationId;
+  private final boolean export;
 
-  public UnexpectedExitStatusException(ExitStatus status) {
+  public TableMigrationReport(
+      TableMigrator migrator, ExitStatus status, String operationId, boolean export) {
+    this.migrator = migrator;
     this.status = status;
+    this.operationId = operationId;
+    this.export = export;
+  }
+
+  public TableMigrator getMigrator() {
+    return migrator;
+  }
+
+  public boolean isExport() {
+    return export;
+  }
+
+  public String getOperationId() {
+    return operationId;
   }
 
   public ExitStatus getStatus() {

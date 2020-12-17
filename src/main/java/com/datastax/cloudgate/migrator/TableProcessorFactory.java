@@ -30,7 +30,9 @@ import com.datastax.oss.driver.api.core.type.SetType;
 import com.datastax.oss.driver.api.core.type.UserDefinedType;
 import com.datastax.oss.protocol.internal.ProtocolConstants;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +41,7 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
 
   public static final Logger LOGGER = LoggerFactory.getLogger(TableProcessorFactory.class);
 
-  public List<T> create(SchemaSettings settings) {
+  public List<T> create(MigrationSettings settings) {
     DriverConfigLoader loader =
         DriverConfigLoader.programmaticBuilder()
             .withString(
@@ -57,38 +59,44 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
         node -> node.getEndPoint().resolve().equals(settings.getExportHostAddress()));
     List<T> processors = new ArrayList<>();
     try (CqlSession session = builder.build()) {
-      List<CqlIdentifier> exportKeyspaces = settings.getExportKeyspaces();
-      if (exportKeyspaces.isEmpty()) {
-        exportKeyspaces = allKeyspaces(session);
-      }
-      LOGGER.info("Keyspaces to migrate: {}", exportKeyspaces);
-      for (CqlIdentifier keyspaceName : exportKeyspaces) {
+      Pattern exportKeyspaces = settings.getExportKeyspaces();
+      List<CqlIdentifier> keyspaceNames =
+          session.getMetadata().getKeyspaces().values().stream()
+              .map(KeyspaceMetadata::getName)
+              .filter(name -> exportKeyspaces.matcher(name.asInternal()).matches())
+              .sorted(Comparator.comparing(CqlIdentifier::asInternal))
+              .collect(Collectors.toList());
+      LOGGER.info("Tables to migrate:");
+      for (CqlIdentifier keyspaceName : keyspaceNames) {
         KeyspaceMetadata keyspace = session.getMetadata().getKeyspaces().get(keyspaceName);
-        if (keyspace == null) {
-          throw new IllegalArgumentException("Keyspace does not exist: " + keyspaceName);
-        }
-        for (TableMetadata table : keyspace.getTables().values()) {
-          List<ExportedColumn> exportedColumns = buildExportedColumns(table, session);
-          processors.add(create(table, settings, exportedColumns));
+        Pattern exportTables = settings.getExportTables();
+        List<TableMetadata> tables =
+            keyspace.getTables().values().stream()
+                .sorted(Comparator.comparing(t -> t.getName().asInternal()))
+                .filter(table -> exportTables.matcher(table.getName().asInternal()).matches())
+                .collect(Collectors.toList());
+        if (!tables.isEmpty()) {
+          tables.stream()
+              .map(
+                  tableMetadata ->
+                      "- "
+                          + tableMetadata.getKeyspace().asCql(true)
+                          + "."
+                          + tableMetadata.getName().asCql(true))
+              .forEach(LOGGER::info);
+          for (TableMetadata table : tables) {
+            List<ExportedColumn> exportedColumns = buildExportedColumns(table, session);
+            processors.add(create(table, settings, exportedColumns));
+          }
         }
       }
     }
+    LOGGER.info("Migrating {} tables in total", processors.size());
     return processors;
   }
 
   protected abstract T create(
-      TableMetadata table, SchemaSettings settings, List<ExportedColumn> exportedColumns);
-
-  private static List<CqlIdentifier> allKeyspaces(CqlSession session) {
-    return session.getMetadata().getKeyspaces().keySet().stream()
-        .filter(
-            ks ->
-                !ks.asInternal().startsWith("system_")
-                    && !ks.asInternal().startsWith("dse_")
-                    && !ks.asInternal().equals("system")
-                    && !ks.asInternal().equals("OpsCenter"))
-        .collect(Collectors.toList());
-  }
+      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns);
 
   private static List<ExportedColumn> buildExportedColumns(
       TableMetadata table, CqlSession session) {

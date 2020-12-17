@@ -13,45 +13,49 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator;
+package com.datastax.cloudgate.migrator.script;
 
+import com.datastax.cloudgate.migrator.MigrationSettings;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class SchemaGenerator {
+public class SchemaScriptGenerator {
 
-  public static void main(String[] args) throws IOException {
-    SchemaGenerator generator = new SchemaGenerator(args);
-    generator.generate();
-  }
+  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaScriptGenerator.class);
 
-  private final List<TableGenerator> generators;
-  private final SchemaSettings settings;
+  private final List<TableScriptGenerator> generators;
+  private final MigrationSettings settings;
 
-  public SchemaGenerator(String[] args) throws IOException {
-    settings = new SchemaSettings(args);
-    generators = new TableGeneratorFactory().create(settings);
+  public SchemaScriptGenerator(MigrationSettings settings) {
+    this.settings = settings;
+    generators = new TableScriptGeneratorFactory().create(settings);
   }
 
   public void generate() throws IOException {
     Path exportDir = settings.getExportDir();
-    Path exportScript = exportDir.resolve("dsbulk-export.sh");
-    Path importScript = exportDir.resolve("dsbulk-import.sh");
+    Files.createDirectories(exportDir);
+    Path exportScript = exportDir.resolve("cloud-gate-migrator-export.sh");
+    Path importScript = exportDir.resolve("cloud-gate-migrator-import.sh");
     try (PrintWriter exportWriter =
             new PrintWriter(Files.newBufferedWriter(exportScript, StandardCharsets.UTF_8));
         PrintWriter importWriter =
             new PrintWriter(Files.newBufferedWriter(importScript, StandardCharsets.UTF_8))) {
       printExportScriptHeader(exportWriter);
       printImportScriptHeader(importWriter);
-      for (TableGenerator generator : generators) {
+      for (TableScriptGenerator generator : generators) {
         generator.printExportScript(exportWriter);
         generator.printImportScript(importWriter);
       }
     }
+    LOGGER.info("Scripts successfully generated:");
+    LOGGER.info("Export script: {}", exportScript);
+    LOGGER.info("Import script: {}", importScript);
   }
 
   private void printExportScriptHeader(PrintWriter writer) {
@@ -73,7 +77,7 @@ public class SchemaGenerator {
     writer.println("dsbulk_cmd=\"${MIGRATOR_EXPORT_CMD:-" + settings.getDsbulkCmd() + "}\"");
     writer.println(
         "dsbulk_logs=\"${MIGRATOR_EXPORT_LOG_DIR:-" + settings.getDsbulkLogDir() + "}\"");
-    writer.println("export_dir=\"${MIGRATOR_EXPORT_DIR:-" + settings.getExportDir() + "}\"");
+    writer.println("data_dir=\"${MIGRATOR_DATA_DIR:-" + settings.getExportDir() + "}\"");
     writer.println(
         "max_records=\"${MIGRATOR_EXPORT_MAX_RECORDS:-" + settings.getExportMaxRecords() + "}\"");
     writer.println(
@@ -90,6 +94,7 @@ public class SchemaGenerator {
             + settings.getExportConsistency()
             + "}\"");
     writer.println();
+    writer.flush();
   }
 
   private void printImportScriptHeader(PrintWriter writer) {
@@ -111,7 +116,7 @@ public class SchemaGenerator {
     writer.println("dsbulk_cmd=\"${MIGRATOR_IMPORT_CMD:-" + settings.getDsbulkCmd() + "}\"");
     writer.println(
         "dsbulk_logs=\"${MIGRATOR_IMPORT_LOG_DIR:-" + settings.getDsbulkLogDir() + "}\"");
-    writer.println("import_dir=\"${MIGRATOR_IMPORT_DIR:-" + settings.getExportDir() + "}\"");
+    writer.println("data_dir=\"${MIGRATOR_DATA_DIR:-" + settings.getExportDir() + "}\"");
     writer.println(
         "max_concurrent_files=\"${MIGRATOR_IMPORT_MAX_CONCURRENT_FILES:-"
             + settings.getImportMaxConcurrentFiles()
@@ -129,5 +134,6 @@ public class SchemaGenerator {
             + settings.getImportDefaultTimestamp()
             + "}\"");
     writer.println();
+    writer.flush();
   }
 }

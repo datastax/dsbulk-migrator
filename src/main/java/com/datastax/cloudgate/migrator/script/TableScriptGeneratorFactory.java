@@ -13,16 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator;
+package com.datastax.cloudgate.migrator.script;
 
+import com.datastax.cloudgate.migrator.ExportedColumn;
+import com.datastax.cloudgate.migrator.MigrationSettings;
+import com.datastax.cloudgate.migrator.TableProcessorFactory;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.util.List;
 
-public class TableMigratorFactory extends TableProcessorFactory<TableMigrator> {
+public class TableScriptGeneratorFactory extends TableProcessorFactory<TableScriptGenerator> {
 
   @Override
-  protected TableMigrator create(
-      TableMetadata table, SchemaSettings settings, List<ExportedColumn> exportedColumns) {
-    return new TableMigrator(table, settings, exportedColumns);
+  protected TableScriptGenerator create(
+      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
+    return new TableScriptGenerator(table, settings, exportedColumns);
   }
 }
