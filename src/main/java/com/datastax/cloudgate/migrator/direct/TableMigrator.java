@@ -142,7 +142,7 @@ public abstract class TableMigrator extends TableProcessor {
     args.add("unload");
     if (settings.getExportBundle().isPresent()) {
       args.add("-b");
-      args.add(String.valueOf(settings.getImportBundle()));
+      args.add(String.valueOf(settings.getExportBundle().get()));
     } else {
       args.add("-h");
       args.add("[\"" + settings.getExportHostString() + "\"]");
@@ -185,7 +185,7 @@ public abstract class TableMigrator extends TableProcessor {
     args.add("load");
     if (settings.getImportBundle().isPresent()) {
       args.add("-b");
-      args.add(String.valueOf(settings.getImportBundle()));
+      args.add(String.valueOf(settings.getImportBundle().get()));
     } else {
       args.add("-h");
       args.add("[\"" + settings.getImportHostString() + "\"]");
