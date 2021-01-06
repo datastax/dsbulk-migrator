@@ -67,22 +67,22 @@ public class SchemaMigrator {
       LOGGER.error(e.getMessage(), e);
     } finally {
       pool.shutdownNow();
-    }
-    LOGGER.info(
-        "Migration finished with {} successfully migrated tables, {} failed tables.",
-        successful.size(),
-        failed.size());
-    for (TableMigrationReport report : successful) {
       LOGGER.info(
-          "Table {} migrated successfully.", report.getMigrator().getFullyQualifiedTableName());
-    }
-    for (TableMigrationReport report : failed) {
-      LOGGER.error(
-          "Table {} could not be {}: operation {} exited with {}.",
-          report.getMigrator().getFullyQualifiedTableName(),
-          report.isExport() ? "exported" : "imported",
-          report.getOperationId(),
-          report.getStatus());
+          "Migration finished with {} successfully migrated tables, {} failed tables.",
+          successful.size(),
+          failed.size());
+      for (TableMigrationReport report : successful) {
+        LOGGER.info(
+            "Table {} migrated successfully.", report.getMigrator().getFullyQualifiedTableName());
+      }
+      for (TableMigrationReport report : failed) {
+        LOGGER.error(
+            "Table {} could not be {}: operation {} exited with {}.",
+            report.getMigrator().getFullyQualifiedTableName(),
+            report.isExport() ? "exported" : "imported",
+            report.getOperationId(),
+            report.getStatus());
+      }
     }
   }
 
@@ -98,7 +98,12 @@ public class SchemaMigrator {
                 + migrator.getFullyQualifiedTableName()
                 + ": unexpected error when exporting data, aborting",
             e);
-        break;
+        report =
+            new TableMigrationReport(
+                migrator,
+                ExitStatus.STATUS_ABORTED_FATAL_ERROR,
+                migrator.createOperationId(true),
+                true);
       }
       if (report.getStatus() == ExitStatus.STATUS_OK) {
         importQueue.add(migrator);
@@ -131,7 +136,12 @@ public class SchemaMigrator {
                 + migrator.getFullyQualifiedTableName()
                 + ": unexpected error when importing data, aborting",
             e);
-        break;
+        report =
+            new TableMigrationReport(
+                migrator,
+                ExitStatus.STATUS_ABORTED_FATAL_ERROR,
+                migrator.createOperationId(false),
+                false);
       }
       if (report.getStatus() == ExitStatus.STATUS_OK) {
         successful.add(report);
