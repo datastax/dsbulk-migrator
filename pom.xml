@@ -25,6 +25,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
+    <dsbulk.version>1.7.0</dsbulk.version>
   </properties>
   <dependencies>
     <dependency>
@@ -35,32 +36,37 @@
     <dependency>
       <groupId>com.datastax.oss</groupId>
       <artifactId>dsbulk-runner</artifactId>
-      <version>1.7.0</version>
+      <version>${dsbulk.version}</version>
     </dependency>
     <dependency>
       <groupId>com.datastax.oss</groupId>
       <artifactId>dsbulk-workflow-load</artifactId>
-      <version>1.7.0</version>
+      <version>${dsbulk.version}</version>
     </dependency>
     <dependency>
       <groupId>com.datastax.oss</groupId>
       <artifactId>dsbulk-workflow-unload</artifactId>
-      <version>1.7.0</version>
+      <version>${dsbulk.version}</version>
     </dependency>
     <dependency>
       <groupId>com.datastax.oss</groupId>
       <artifactId>dsbulk-connectors-csv</artifactId>
-      <version>1.7.0</version>
+      <version>${dsbulk.version}</version>
     </dependency>
     <dependency>
       <groupId>com.datastax.oss</groupId>
       <artifactId>dsbulk-executor-reactor</artifactId>
-      <version>1.7.0</version>
+      <version>${dsbulk.version}</version>
     </dependency>
     <dependency>
       <groupId>com.datastax.oss</groupId>
       <artifactId>dsbulk-batcher-reactor</artifactId>
-      <version>1.7.0</version>
+      <version>${dsbulk.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.typesafe</groupId>
+      <artifactId>config</artifactId>
+      <version>1.4.0</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -71,6 +77,18 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>1.2.3</version>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.6.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.datastax.oss</groupId>
+      <artifactId>dsbulk-tests</artifactId>
+      <version>${dsbulk.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
   <build>
@@ -143,6 +161,19 @@ limitations under the License.]]></inlineHeader>
             <phase>initialize</phase>
             <goals>
               <goal>format</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.0.0-M5</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
             </goals>
           </execution>
         </executions>

@@ -16,6 +16,7 @@
 package com.datastax.cloudgate.migrator.direct;
 
 import com.datastax.cloudgate.migrator.MigrationSettings;
+import com.datastax.oss.driver.shaded.guava.common.util.concurrent.MoreExecutors;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -47,19 +48,18 @@ public class SchemaMigrator {
     exportQueue = new LinkedBlockingQueue<>();
     importQueue = new LinkedBlockingQueue<>();
     pool =
-        Executors.newFixedThreadPool(
-            settings.getExportMaxConcurrentOps() + settings.getImportMaxConcurrentOps());
+        settings.getMaxConcurrentOps() == 1
+            ? MoreExecutors.newDirectExecutorService()
+            : Executors.newFixedThreadPool(settings.getMaxConcurrentOps());
   }
 
-  public void migrate() throws Exception {
+  public void migrate() {
     List<TableMigrator> migrators = new TableMigratorFactory().create(settings);
     exportQueue.addAll(migrators);
     try {
       List<CompletableFuture<?>> futures = new ArrayList<>();
-      for (int i = 0; i < settings.getExportMaxConcurrentOps(); i++) {
+      for (int i = 0; i < settings.getMaxConcurrentOps(); i++) {
         futures.add(CompletableFuture.runAsync(this::exportTables, pool));
-      }
-      for (int i = 0; i < settings.getImportMaxConcurrentOps(); i++) {
         futures.add(CompletableFuture.runAsync(this::importTables, pool));
       }
       CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();

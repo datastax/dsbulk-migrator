@@ -59,7 +59,7 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
         node -> node.getEndPoint().resolve().equals(settings.getExportHostAddress()));
     List<T> processors = new ArrayList<>();
     try (CqlSession session = builder.build()) {
-      Pattern exportKeyspaces = settings.getExportKeyspaces();
+      Pattern exportKeyspaces = settings.getKeyspaces();
       List<CqlIdentifier> keyspaceNames =
           session.getMetadata().getKeyspaces().values().stream()
               .map(KeyspaceMetadata::getName)
@@ -69,7 +69,7 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
       LOGGER.info("Tables to migrate:");
       for (CqlIdentifier keyspaceName : keyspaceNames) {
         KeyspaceMetadata keyspace = session.getMetadata().getKeyspaces().get(keyspaceName);
-        Pattern exportTables = settings.getExportTables();
+        Pattern exportTables = settings.getTables();
         List<TableMetadata> tables =
             keyspace.getTables().values().stream()
                 .sorted(Comparator.comparing(t -> t.getName().asInternal()))

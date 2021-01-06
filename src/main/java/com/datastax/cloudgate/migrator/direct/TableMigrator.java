@@ -50,11 +50,11 @@ public abstract class TableMigrator extends TableProcessor {
     super(table, settings, exportedColumns);
     this.dataDir =
         settings
-            .getExportDir()
+            .getDataDir()
             .resolve(table.getKeyspace().asInternal())
             .resolve(table.getName().asInternal());
-    this.exportAckDir = settings.getExportDir().resolve("__exported__");
-    this.importAckDir = settings.getExportDir().resolve("__imported__");
+    this.exportAckDir = settings.getDataDir().resolve("__exported__");
+    this.importAckDir = settings.getDataDir().resolve("__imported__");
     this.exportAckFile =
         exportAckDir.resolve(
             table.getKeyspace().asInternal() + "__" + table.getName().asInternal() + ".exported");

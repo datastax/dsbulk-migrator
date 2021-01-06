@@ -38,7 +38,7 @@ public class SchemaScriptGenerator {
   }
 
   public void generate() throws IOException {
-    Path exportDir = settings.getExportDir();
+    Path exportDir = settings.getDataDir();
     Files.createDirectories(exportDir);
     Path exportScript = exportDir.resolve("cloud-gate-migrator-export.sh");
     Path importScript = exportDir.resolve("cloud-gate-migrator-import.sh");
@@ -77,7 +77,7 @@ public class SchemaScriptGenerator {
     writer.println("dsbulk_cmd=\"${MIGRATOR_EXPORT_CMD:-" + settings.getDsbulkCmd() + "}\"");
     writer.println(
         "dsbulk_logs=\"${MIGRATOR_EXPORT_LOG_DIR:-" + settings.getDsbulkLogDir() + "}\"");
-    writer.println("data_dir=\"${MIGRATOR_DATA_DIR:-" + settings.getExportDir() + "}\"");
+    writer.println("data_dir=\"${MIGRATOR_DATA_DIR:-" + settings.getDataDir() + "}\"");
     writer.println(
         "max_records=\"${MIGRATOR_EXPORT_MAX_RECORDS:-" + settings.getExportMaxRecords() + "}\"");
     writer.println(
@@ -116,7 +116,7 @@ public class SchemaScriptGenerator {
     writer.println("dsbulk_cmd=\"${MIGRATOR_IMPORT_CMD:-" + settings.getDsbulkCmd() + "}\"");
     writer.println(
         "dsbulk_logs=\"${MIGRATOR_IMPORT_LOG_DIR:-" + settings.getDsbulkLogDir() + "}\"");
-    writer.println("data_dir=\"${MIGRATOR_DATA_DIR:-" + settings.getExportDir() + "}\"");
+    writer.println("data_dir=\"${MIGRATOR_DATA_DIR:-" + settings.getDataDir() + "}\"");
     writer.println(
         "max_concurrent_files=\"${MIGRATOR_IMPORT_MAX_CONCURRENT_FILES:-"
             + settings.getImportMaxConcurrentFiles()

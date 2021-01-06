@@ -30,6 +30,13 @@ import java.util.regex.Pattern;
 
 public class MigrationSettings {
 
+  // General settings
+
+  private Path dataDir = Paths.get("export").normalize().toAbsolutePath();
+  private Pattern keyspaces = Pattern.compile("^(?!system|dse|OpsCenter)\\w+$");
+  private Pattern tables = Pattern.compile(".*");
+  private int maxConcurrentOps = 1;
+
   // Export settings
 
   private HostAndPort exportHostAndPort = HostAndPort.fromParts("127.0.0.1", 9042);
@@ -38,15 +45,11 @@ public class MigrationSettings {
   private Path exportBundle;
   private String exportUsername;
   private String exportPassword;
-  private Path exportDir = Paths.get("export").normalize().toAbsolutePath();
   private int exportMaxRecords = 500000;
   private String exportMaxConcurrentFiles = "AUTO";
   private String exportMaxConcurrentQueries = "AUTO";
   private String exportSplits = "8C";
   private ConsistencyLevel exportConsistency = ConsistencyLevel.LOCAL_QUORUM;
-  private Pattern exportKeyspaces = Pattern.compile("^(?!system|dse|OpsCenter)\\w+$");
-  private Pattern exportTables = Pattern.compile(".*");
-  private int exportMaxConcurrentOps = 1;
 
   // Import settings
 
@@ -60,7 +63,6 @@ public class MigrationSettings {
   private String importMaxConcurrentQueries = "AUTO";
   private ConsistencyLevel importConsistency = ConsistencyLevel.LOCAL_QUORUM;
   private long importDefaultTimestamp = 0;
-  private int importMaxConcurrentOps = 1;
 
   // DSBulk settings
 
@@ -78,6 +80,22 @@ public class MigrationSettings {
       String arg = it.next();
 
       switch (arg) {
+        case "--dataDir":
+          dataDir = Paths.get(it.next()).normalize().toAbsolutePath();
+          break;
+        case "--keyspaces":
+          keyspaces = Pattern.compile(it.next());
+          break;
+        case "--tables":
+          tables = Pattern.compile(it.next());
+          break;
+        case "--maxConcurrentOps":
+          maxConcurrentOps = Integer.parseInt(it.next());
+          if (maxConcurrentOps < 1) {
+            throw new IllegalArgumentException("Invalid maxConcurrentOps: " + maxConcurrentOps);
+          }
+          break;
+
         case "--export.host":
           exportHostAndPort = HostAndPort.fromString(it.next());
           exportHostAddress =
@@ -93,9 +111,6 @@ public class MigrationSettings {
         case "--export.password":
           exportPassword = it.next();
           break;
-        case "--export.dir":
-          exportDir = Paths.get(it.next()).normalize().toAbsolutePath();
-          break;
         case "--export.maxRecords":
           exportMaxRecords = Integer.parseInt(it.next());
           break;
@@ -110,15 +125,6 @@ public class MigrationSettings {
           break;
         case "--export.consistency":
           exportConsistency = DefaultConsistencyLevel.valueOf(it.next());
-          break;
-        case "--export.keyspaces":
-          exportKeyspaces = Pattern.compile(it.next());
-          break;
-        case "--export.tables":
-          exportTables = Pattern.compile(it.next());
-          break;
-        case "--export.maxConcurrentOps":
-          exportMaxConcurrentOps = Integer.parseInt(it.next());
           break;
 
         case "--import.host":
@@ -148,9 +154,6 @@ public class MigrationSettings {
         case "--import.timestamp":
           importDefaultTimestamp = Long.parseLong(it.next());
           break;
-        case "--import.maxConcurrentOps":
-          importMaxConcurrentOps = Integer.parseInt(it.next());
-          break;
 
         case "--dsbulk.embedded":
           dsbulkEmbedded = Boolean.parseBoolean(it.next());
@@ -169,7 +172,7 @@ public class MigrationSettings {
           throw new IllegalArgumentException("Unknown parameter: " + arg);
       }
     }
-    checkDirectory(exportDir, "--export.dir");
+    checkDirectory(dataDir, "--export.dir");
     checkDirectory(dsbulkLogDir, "--dsbulk.logs");
     checkFile(exportBundle);
     checkFile(importBundle);
@@ -210,8 +213,20 @@ public class MigrationSettings {
     return Optional.ofNullable(exportPassword);
   }
 
-  public Path getExportDir() {
-    return exportDir;
+  public Path getDataDir() {
+    return dataDir;
+  }
+
+  public Pattern getKeyspaces() {
+    return keyspaces;
+  }
+
+  public Pattern getTables() {
+    return tables;
+  }
+
+  public int getMaxConcurrentOps() {
+    return maxConcurrentOps;
   }
 
   public int getExportMaxRecords() {
@@ -232,14 +247,6 @@ public class MigrationSettings {
 
   public ConsistencyLevel getExportConsistency() {
     return exportConsistency;
-  }
-
-  public Pattern getExportKeyspaces() {
-    return exportKeyspaces;
-  }
-
-  public Pattern getExportTables() {
-    return exportTables;
   }
 
   public String getImportHostString() {
@@ -282,23 +289,15 @@ public class MigrationSettings {
     return dsbulkLogDir;
   }
 
+  public boolean isDsbulkEmbedded() {
+    return dsbulkEmbedded;
+  }
+
   public String getDsbulkCmd() {
     return dsbulkCmd;
   }
 
   public Optional<Path> getDsbulkWorkingDir() {
     return Optional.ofNullable(dsbulkWorkingDir);
-  }
-
-  public int getExportMaxConcurrentOps() {
-    return exportMaxConcurrentOps;
-  }
-
-  public int getImportMaxConcurrentOps() {
-    return importMaxConcurrentOps;
-  }
-
-  public boolean isDsbulkEmbedded() {
-    return dsbulkEmbedded;
   }
 }

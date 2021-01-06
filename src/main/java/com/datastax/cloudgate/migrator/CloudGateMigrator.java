@@ -22,6 +22,7 @@ import com.datastax.cloudgate.migrator.direct.SchemaMigrator;
 import com.datastax.cloudgate.migrator.script.SchemaScriptGenerator;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -30,7 +31,7 @@ import org.slf4j.LoggerFactory;
 public class CloudGateMigrator {
 
   public static void main(String[] args) throws Exception {
-    configureLogging();
+    configureLogging(SchemaMigrator.class.getResource("/logback-migrator.xml"));
     List<String> arguments = new ArrayList<>(Arrays.asList(args));
     String command = arguments.remove(0);
     MigrationSettings settings = new MigrationSettings(arguments);
@@ -43,12 +44,11 @@ public class CloudGateMigrator {
     }
   }
 
-  private static void configureLogging() throws IOException, JoranException {
+  public static void configureLogging(URL configurationFile) throws IOException, JoranException {
     LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
     loggerContext.reset();
     JoranConfigurator configurator = new JoranConfigurator();
-    try (InputStream configStream =
-        SchemaMigrator.class.getResourceAsStream("/logback-migrator.xml")) {
+    try (InputStream configStream = configurationFile.openStream()) {
       configurator.setContext(loggerContext);
       configurator.doConfigure(configStream);
     }
