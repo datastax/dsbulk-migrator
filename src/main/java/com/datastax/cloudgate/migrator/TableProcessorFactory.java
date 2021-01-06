@@ -66,6 +66,7 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
               .filter(name -> exportKeyspaces.matcher(name.asInternal()).matches())
               .sorted(Comparator.comparing(CqlIdentifier::asInternal))
               .collect(Collectors.toList());
+      LOGGER.info("Tables to migrate:");
       for (CqlIdentifier keyspaceName : keyspaceNames) {
         KeyspaceMetadata keyspace = session.getMetadata().getKeyspaces().get(keyspaceName);
         Pattern exportTables = settings.getTables();
@@ -75,7 +76,6 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
                 .filter(table -> exportTables.matcher(table.getName().asInternal()).matches())
                 .collect(Collectors.toList());
         if (!tables.isEmpty()) {
-          LOGGER.info("Tables to migrate:");
           tables.stream()
               .map(
                   tableMetadata ->
