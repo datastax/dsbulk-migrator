@@ -37,15 +37,10 @@ public class ExternalTableMigrator extends TableMigrator {
     if ((operationId = checkAlreadyExported()) != null) {
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
     } else {
-      LOGGER.info(
-          "Exporting {}.{}...", table.getKeyspace().asCql(true), table.getName().asCql(true));
+      LOGGER.info("Exporting {}...", getFullyQualifiedTableName());
       operationId = createOperationId(true);
       ExitStatus status = invokeExternalDsbulk(createExportArgs(operationId));
-      LOGGER.info(
-          "Export of {}.{} finished with {}",
-          table.getKeyspace().asCql(true),
-          table.getName().asCql(true),
-          status);
+      LOGGER.info("Export of {} finished with {}", getFullyQualifiedTableName(), status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
       }
@@ -61,15 +56,10 @@ public class ExternalTableMigrator extends TableMigrator {
     } else if (checkNotYetExported()) {
       return new TableMigrationReport(this, ExitStatus.STATUS_ABORTED_FATAL_ERROR, null, false);
     } else {
-      LOGGER.info(
-          "Importing {}.{}...", table.getKeyspace().asCql(true), table.getName().asCql(true));
+      LOGGER.info("Importing {}...", getFullyQualifiedTableName());
       operationId = createOperationId(false);
       ExitStatus status = invokeExternalDsbulk(createImportArgs(operationId));
-      LOGGER.info(
-          "Import of {}.{} finished with {}",
-          table.getKeyspace().asCql(true),
-          table.getName().asCql(true),
-          status);
+      LOGGER.info("Import of {} finished with {}", getFullyQualifiedTableName(), status);
       if (status == ExitStatus.STATUS_OK) {
         createImportAckFile(operationId);
       }
@@ -87,15 +77,11 @@ public class ExternalTableMigrator extends TableMigrator {
       builder.redirectError(ProcessBuilder.Redirect.DISCARD);
       Process process = builder.start();
       LOGGER.debug(
-          "Table {}.{}: process started (PID {})",
-          table.getKeyspace().asCql(true),
-          table.getName().asCql(true),
-          process.pid());
+          "Table {}: process started (PID {})", getFullyQualifiedTableName(), process.pid());
       int exitCode = process.waitFor();
       LOGGER.debug(
-          "Table {}.{}: process finished (PID {}, exit code {})",
-          table.getKeyspace().asCql(true),
-          table.getName().asCql(true),
+          "Table {}: process finished (PID {}, exit code {})",
+          getFullyQualifiedTableName(),
           process.pid(),
           exitCode);
       return ExitStatus.forCode(exitCode);

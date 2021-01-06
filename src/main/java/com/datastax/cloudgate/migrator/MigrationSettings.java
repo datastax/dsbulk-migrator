@@ -193,6 +193,22 @@ public class MigrationSettings {
     }
   }
 
+  public Path getDataDir() {
+    return dataDir;
+  }
+
+  public Pattern getKeyspaces() {
+    return keyspaces;
+  }
+
+  public Pattern getTables() {
+    return tables;
+  }
+
+  public int getMaxConcurrentOps() {
+    return maxConcurrentOps;
+  }
+
   public String getExportHostString() {
     return exportHostAndPort.toString();
   }
@@ -211,22 +227,6 @@ public class MigrationSettings {
 
   public Optional<String> getExportPassword() {
     return Optional.ofNullable(exportPassword);
-  }
-
-  public Path getDataDir() {
-    return dataDir;
-  }
-
-  public Pattern getKeyspaces() {
-    return keyspaces;
-  }
-
-  public Pattern getTables() {
-    return tables;
-  }
-
-  public int getMaxConcurrentOps() {
-    return maxConcurrentOps;
   }
 
   public int getExportMaxRecords() {

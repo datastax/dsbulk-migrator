@@ -38,16 +38,11 @@ public class EmbeddedTableMigrator extends TableMigrator {
     if ((operationId = checkAlreadyExported()) != null) {
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
     } else {
-      LOGGER.info(
-          "Exporting {}.{}...", table.getKeyspace().asCql(true), table.getName().asCql(true));
+      LOGGER.info("Exporting {}...", getFullyQualifiedTableName());
       operationId = createOperationId(true);
       String[] args = createExportArgs(operationId).toArray(new String[0]);
       ExitStatus status = ExitStatus.forCode(new DataStaxBulkLoader(args).run().exitCode());
-      LOGGER.info(
-          "Export of {}.{} finished with {}",
-          table.getKeyspace().asCql(true),
-          table.getName().asCql(true),
-          status);
+      LOGGER.info("Export of {} finished with {}", getFullyQualifiedTableName(), status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
       }
@@ -63,16 +58,11 @@ public class EmbeddedTableMigrator extends TableMigrator {
     } else if (checkNotYetExported()) {
       return new TableMigrationReport(this, ExitStatus.STATUS_ABORTED_FATAL_ERROR, null, false);
     } else {
-      LOGGER.info(
-          "Importing {}.{}...", table.getKeyspace().asCql(true), table.getName().asCql(true));
+      LOGGER.info("Importing {}...", getFullyQualifiedTableName());
       operationId = createOperationId(false);
       String[] args = createImportArgs(operationId).toArray(new String[0]);
       ExitStatus status = ExitStatus.forCode(new DataStaxBulkLoader(args).run().exitCode());
-      LOGGER.info(
-          "Import of {}.{} finished with {}",
-          table.getKeyspace().asCql(true),
-          table.getName().asCql(true),
-          status);
+      LOGGER.info("Import of {} finished with {}", getFullyQualifiedTableName(), status);
       if (status == ExitStatus.STATUS_OK) {
         createImportAckFile(operationId);
       }
