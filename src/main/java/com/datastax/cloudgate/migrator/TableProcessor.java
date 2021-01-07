@@ -128,7 +128,7 @@ public abstract class TableProcessor {
   }
 
   protected String buildBatchImportQuery() {
-    StringBuilder builder = new StringBuilder("\"BEGIN BATCH ");
+    StringBuilder builder = new StringBuilder("\"BEGIN UNLOGGED BATCH ");
     Iterator<ExportedColumn> cols = exportedColumns.stream().filter(col -> !col.pk).iterator();
     while (cols.hasNext()) {
       ExportedColumn exportedColumn = cols.next();
