@@ -15,9 +15,9 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
-import com.datastax.cloudgate.migrator.ExportedColumn;
-import com.datastax.cloudgate.migrator.MigrationSettings;
-import com.datastax.cloudgate.migrator.TableUtils;
+import com.datastax.cloudgate.migrator.processor.ExportedColumn;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.datastax.oss.dsbulk.runner.DataStaxBulkLoader;
 import java.util.List;
@@ -39,7 +39,7 @@ public class EmbeddedTableLiveMigrator extends TableLiveMigrator {
     if ((operationId = checkAlreadyExported()) != null) {
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
     } else {
-      if (!settings.isTruncateAfterExport() && TableUtils.isCounterTable(table)) {
+      if (settings.generalSettings.truncateBeforeExport && TableUtils.isCounterTable(table)) {
         truncateTable();
       }
       LOGGER.info("Exporting {}...", TableUtils.getFullyQualifiedTableName(table));
@@ -50,7 +50,7 @@ public class EmbeddedTableLiveMigrator extends TableLiveMigrator {
           "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
-        if (settings.isTruncateAfterExport() && TableUtils.isCounterTable(table)) {
+        if (!settings.generalSettings.truncateBeforeExport && TableUtils.isCounterTable(table)) {
           truncateTable();
         }
       }

@@ -15,9 +15,9 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
-import com.datastax.cloudgate.migrator.ExportedColumn;
-import com.datastax.cloudgate.migrator.MigrationSettings;
-import com.datastax.cloudgate.migrator.TableUtils;
+import com.datastax.cloudgate.migrator.processor.ExportedColumn;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.util.List;
 import org.slf4j.Logger;
@@ -77,9 +77,11 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
   private ExitStatus invokeExternalDsbulk(List<String> args) {
     try {
       ProcessBuilder builder = new ProcessBuilder();
-      args.add(0, settings.getDsbulkCmd());
+      args.add(0, String.valueOf(settings.dsBulkSettings.dsbulkCmd));
       builder.command(args);
-      settings.getDsbulkWorkingDir().ifPresent(dir -> builder.directory(dir.toFile()));
+      if (settings.dsBulkSettings.dsbulkWorkingDir != null) {
+        builder.directory(settings.dsBulkSettings.dsbulkWorkingDir.toFile());
+      }
       builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
       builder.redirectError(ProcessBuilder.Redirect.DISCARD);
       Process process = builder.start();

@@ -15,9 +15,9 @@
  */
 package com.datastax.cloudgate.migrator.script;
 
-import com.datastax.cloudgate.migrator.ExportedColumn;
-import com.datastax.cloudgate.migrator.MigrationSettings;
-import com.datastax.cloudgate.migrator.TableProcessorFactory;
+import com.datastax.cloudgate.migrator.processor.ExportedColumn;
+import com.datastax.cloudgate.migrator.processor.TableProcessorFactory;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.util.List;
 

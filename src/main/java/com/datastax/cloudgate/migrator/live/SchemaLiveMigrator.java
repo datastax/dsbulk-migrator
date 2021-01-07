@@ -15,8 +15,8 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
-import com.datastax.cloudgate.migrator.MigrationSettings;
-import com.datastax.cloudgate.migrator.TableUtils;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.shaded.guava.common.util.concurrent.MoreExecutors;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,9 +57,9 @@ public class SchemaLiveMigrator {
     exportQueue = new LinkedBlockingQueue<>();
     importQueue = new LinkedBlockingQueue<>();
     pool =
-        settings.getMaxConcurrentOps() == 1
+        settings.generalSettings.maxConcurrentOps == 1
             ? MoreExecutors.newDirectExecutorService()
-            : Executors.newFixedThreadPool(settings.getMaxConcurrentOps());
+            : Executors.newFixedThreadPool(settings.generalSettings.maxConcurrentOps);
     migrators = new TableMigratorFactory().create(settings);
     hasRegularTables =
         migrators.stream().anyMatch(migrator -> !TableUtils.isCounterTable(migrator.getTable()));
@@ -67,9 +67,9 @@ public class SchemaLiveMigrator {
         migrators.stream().anyMatch(migrator -> TableUtils.isCounterTable(migrator.getTable()));
   }
 
-  public void migrate() {
+  public ExitStatus migrate() {
     try {
-      checkTruncateOk();
+      askPermissionToTruncate();
       if (hasRegularTables) {
         LOGGER.info("Migrating regular tables...");
         migrateTables(migrator -> !TableUtils.isCounterTable(migrator.getTable()));
@@ -102,6 +102,13 @@ public class SchemaLiveMigrator {
             report.getStatus());
       }
     }
+    if (failed.isEmpty()) {
+      return ExitStatus.STATUS_OK;
+    }
+    if (successful.isEmpty()) {
+      return ExitStatus.STATUS_ABORTED_TOO_MANY_ERRORS;
+    }
+    return ExitStatus.STATUS_COMPLETED_WITH_ERRORS;
   }
 
   private void migrateTables(Predicate<TableLiveMigrator> filter) {
@@ -109,7 +116,7 @@ public class SchemaLiveMigrator {
         migrators.stream().filter(filter).collect(Collectors.toList());
     exportQueue.addAll(filtered);
     List<CompletableFuture<?>> futures = new ArrayList<>();
-    for (int i = 0; i < settings.getMaxConcurrentOps(); i++) {
+    for (int i = 0; i < settings.generalSettings.maxConcurrentOps; i++) {
       futures.add(CompletableFuture.runAsync(this::exportTables, pool));
       futures.add(CompletableFuture.runAsync(this::importTables, pool));
     }
@@ -173,8 +180,8 @@ public class SchemaLiveMigrator {
     }
   }
 
-  private void checkTruncateOk() {
-    if (hasCounterTables && settings.isCheckTruncateOk()) {
+  private void askPermissionToTruncate() {
+    if (hasCounterTables && !settings.generalSettings.skipTruncateConfirmation) {
       List<TableLiveMigrator> remainingCounterTables =
           migrators.stream()
               .filter(migrator -> TableUtils.isCounterTable(migrator.getTable()))
@@ -184,7 +191,7 @@ public class SchemaLiveMigrator {
         // Bypass the logging system and hit System.err directly
         System.err.println("WARNING!");
         System.err.println(
-            (settings.isTruncateAfterExport() ? "After" : "Before")
+            (settings.generalSettings.truncateBeforeExport ? "Before" : "After")
                 + " they are exported, counter tables must be truncated on the target cluster.");
         System.err.println(
             "If you agree to proceed, the following tables WILL BE TRUNCATED on the TARGET cluster:");
@@ -207,7 +214,10 @@ public class SchemaLiveMigrator {
                     migrator ->
                         failed.add(
                             new TableMigrationReport(
-                                migrator, ExitStatus.STATUS_ABORTED_FATAL_ERROR, null, false)));
+                                migrator,
+                                ExitStatus.STATUS_ABORTED_FATAL_ERROR,
+                                null,
+                                settings.generalSettings.truncateBeforeExport)));
             throw new CancellationException("Truncate permission denied by user");
           }
         }

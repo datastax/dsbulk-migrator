@@ -20,6 +20,7 @@ import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.datastax.cloudgate.migrator.live.SchemaLiveMigrator;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.oss.simulacron.common.cluster.QueryLog;
 import com.datastax.oss.simulacron.server.BoundCluster;
 import java.io.IOException;

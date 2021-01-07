@@ -17,7 +17,12 @@ package com.datastax.cloudgate.migrator;
 
 import static com.datastax.oss.dsbulk.workflow.api.utils.PlatformUtils.isWindows;
 
+import com.datastax.cloudgate.migrator.settings.ExportSettings;
+import com.datastax.cloudgate.migrator.settings.ImportSettings;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.LoggingUtils;
 import com.datastax.oss.driver.api.core.type.DataTypes;
+import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronExtension;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronUtils;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronUtils.Column;
@@ -36,7 +41,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -119,7 +123,7 @@ abstract class ITBase {
 
   @BeforeEach
   void resetLogging() throws Exception {
-    CloudGateMigrator.configureLogging(getClass().getResource("/logback-test.xml"));
+    LoggingUtils.configureLogging(getClass().getResource("/logback-test.xml"));
   }
 
   @BeforeEach
@@ -192,30 +196,24 @@ abstract class ITBase {
             .then(new SuccessResult(Collections.emptyList(), Collections.emptyMap())));
   }
 
-  MigrationSettings createSettings(boolean embedded) throws IOException {
-    List<String> args = new ArrayList<>();
-    Collections.addAll(
-        args,
-        "--dataDir",
-        dataDir.toString(),
-        "--export.host",
-        originHost,
-        "--import.host",
-        targetHost,
-        "--dsbulk.embedded",
-        Boolean.toString(embedded),
-        "--dsbulk.logs",
-        logsDir.toString());
+  MigrationSettings createSettings(boolean embedded) {
+    MigrationSettings settings = new MigrationSettings();
+    settings.generalSettings.dataDir = dataDir;
+    settings.exportSettings.clusterInfo = new ExportSettings.ClusterInfo();
+    settings.importSettings.clusterInfo = new ImportSettings.ClusterInfo();
+    settings.exportSettings.clusterInfo.hostAndPort = HostAndPort.fromString(originHost);
+    settings.importSettings.clusterInfo.hostAndPort = HostAndPort.fromString(targetHost);
+    settings.dsBulkSettings.dsbulkEmbedded = embedded;
+    settings.dsBulkSettings.dsbulkLogDir = logsDir;
     if (!embedded) {
       if (isWindows()) {
-        Collections.addAll(
-            args, "--dsbulk.cmd", dsbulkDir.resolve("bin").resolve("dsbulk.cmd").toString());
+        settings.dsBulkSettings.dsbulkCmd =
+            dsbulkDir.resolve("bin").resolve("dsbulk.cmd").toString();
       } else {
-        Collections.addAll(
-            args, "--dsbulk.cmd", dsbulkDir.resolve("bin").resolve("dsbulk").toString());
+        settings.dsBulkSettings.dsbulkCmd = dsbulkDir.resolve("bin").resolve("dsbulk").toString();
       }
     }
-    return new MigrationSettings(args);
+    return settings;
   }
 
   @SuppressWarnings("deprecation")

@@ -15,10 +15,10 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
-import com.datastax.cloudgate.migrator.ExportedColumn;
-import com.datastax.cloudgate.migrator.MigrationSettings;
-import com.datastax.cloudgate.migrator.TableProcessor;
-import com.datastax.cloudgate.migrator.TableUtils;
+import com.datastax.cloudgate.migrator.processor.ExportedColumn;
+import com.datastax.cloudgate.migrator.processor.TableProcessor;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
@@ -55,11 +55,12 @@ public abstract class TableLiveMigrator extends TableProcessor {
     super(table, settings, exportedColumns);
     this.dataDir =
         settings
-            .getDataDir()
+            .generalSettings
+            .dataDir
             .resolve(table.getKeyspace().asInternal())
             .resolve(table.getName().asInternal());
-    this.exportAckDir = settings.getDataDir().resolve("__exported__");
-    this.importAckDir = settings.getDataDir().resolve("__imported__");
+    this.exportAckDir = settings.generalSettings.dataDir.resolve("__exported__");
+    this.importAckDir = settings.generalSettings.dataDir.resolve("__imported__");
     this.exportAckFile =
         exportAckDir.resolve(
             table.getKeyspace().asInternal() + "__" + table.getName().asInternal() + ".exported");
@@ -150,33 +151,31 @@ public abstract class TableLiveMigrator extends TableProcessor {
   protected List<String> createExportArgs(String operationId) {
     List<String> args = new ArrayList<>();
     args.add("unload");
-    if (settings.getExportBundle().isPresent()) {
+    if (settings.exportSettings.clusterInfo.bundle != null) {
       args.add("-b");
-      args.add(String.valueOf(settings.getExportBundle().get()));
+      args.add(String.valueOf(settings.exportSettings.clusterInfo.bundle));
     } else {
       args.add("-h");
-      args.add("[\"" + settings.getExportHostString() + "\"]");
+      args.add("[\"" + settings.exportSettings.clusterInfo.hostAndPort + "\"]");
     }
-    if (settings.getExportUsername().isPresent()) {
+    if (settings.exportSettings.credentials != null) {
       args.add("-u");
-      args.add(settings.getExportUsername().get());
-    }
-    if (settings.getExportPassword().isPresent()) {
+      args.add(settings.exportSettings.credentials.username);
       args.add("-p");
-      args.add(settings.getExportPassword().get());
+      args.add(String.valueOf(settings.exportSettings.credentials.password));
     }
     args.add("-url");
     args.add(String.valueOf(dataDir));
     args.add("-maxRecords");
-    args.add(String.valueOf(settings.getExportMaxRecords()));
+    args.add(String.valueOf(settings.exportSettings.maxRecords));
     args.add("-maxConcurrentFiles");
-    args.add(settings.getExportMaxConcurrentFiles());
+    args.add(settings.exportSettings.maxConcurrentFiles);
     args.add("-maxConcurrentQueries");
-    args.add(settings.getExportMaxConcurrentQueries());
+    args.add(settings.exportSettings.maxConcurrentQueries);
     args.add("--schema.splits");
-    args.add(settings.getExportSplits());
+    args.add(settings.exportSettings.splits);
     args.add("-cl");
-    args.add(String.valueOf(settings.getExportConsistency()));
+    args.add(String.valueOf(settings.exportSettings.consistencyLevel));
     args.add("-maxErrors");
     args.add("0");
     args.add("-header");
@@ -186,7 +185,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("--engine.executionId");
     args.add(operationId);
     args.add("-logDir");
-    args.add(String.valueOf(settings.getDsbulkLogDir()));
+    args.add(String.valueOf(settings.dsBulkSettings.dsbulkLogDir));
     args.add("-query");
     args.add(buildExportQuery());
     return args;
@@ -195,31 +194,29 @@ public abstract class TableLiveMigrator extends TableProcessor {
   protected List<String> createImportArgs(String operationId) {
     List<String> args = new ArrayList<>();
     args.add("load");
-    if (settings.getImportBundle().isPresent()) {
+    if (settings.importSettings.clusterInfo.bundle != null) {
       args.add("-b");
-      args.add(String.valueOf(settings.getImportBundle().get()));
+      args.add(String.valueOf(settings.importSettings.clusterInfo.bundle));
     } else {
       args.add("-h");
-      args.add("[\"" + settings.getImportHostString() + "\"]");
+      args.add("[\"" + settings.importSettings.clusterInfo.hostAndPort + "\"]");
     }
-    if (settings.getImportUsername().isPresent()) {
+    if (settings.importSettings.credentials != null) {
       args.add("-u");
-      args.add(settings.getImportUsername().get());
-    }
-    if (settings.getImportPassword().isPresent()) {
+      args.add(settings.importSettings.credentials.username);
       args.add("-p");
-      args.add(settings.getImportPassword().get());
+      args.add(String.valueOf(settings.importSettings.credentials.password));
     }
     args.add("-url");
     args.add(String.valueOf(dataDir));
     args.add("-maxConcurrentFiles");
-    args.add(settings.getImportMaxConcurrentFiles());
+    args.add(settings.importSettings.maxConcurrentFiles);
     args.add("-maxConcurrentQueries");
-    args.add(settings.getImportMaxConcurrentQueries());
+    args.add(settings.importSettings.maxConcurrentQueries);
     args.add("-cl");
-    args.add(String.valueOf(settings.getImportConsistency()));
+    args.add(String.valueOf(settings.importSettings.consistencyLevel));
     args.add("-maxErrors");
-    args.add(String.valueOf(settings.getImportMaxErrors()));
+    args.add(String.valueOf(settings.importSettings.maxErrors));
     args.add("-header");
     args.add("false");
     args.add("-verbosity");
@@ -227,7 +224,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("--engine.executionId");
     args.add(operationId);
     args.add("-logDir");
-    args.add(String.valueOf(settings.getDsbulkLogDir()));
+    args.add(String.valueOf(settings.dsBulkSettings.dsbulkLogDir));
     args.add("-m");
     args.add(buildImportMapping());
     int regularColumns = countRegularColumns();
@@ -257,14 +254,15 @@ public abstract class TableLiveMigrator extends TableProcessor {
                 DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, "DcInferringLoadBalancingPolicy")
             .build();
     CqlSessionBuilder builder = CqlSession.builder().withConfigLoader(loader);
-    if (settings.getImportBundle().isPresent()) {
-      builder.withCloudSecureConnectBundle(settings.getImportBundle().get());
+    if (settings.importSettings.clusterInfo.bundle != null) {
+      builder.withCloudSecureConnectBundle(settings.importSettings.clusterInfo.bundle);
     } else {
-      builder.addContactPoint(settings.getImportHostAddress());
+      builder.addContactPoint(settings.importSettings.clusterInfo.getHostAddress());
     }
-    if (settings.getImportUsername().isPresent() && settings.getImportPassword().isPresent()) {
+    if (settings.importSettings.credentials != null) {
       builder.withAuthCredentials(
-          settings.getImportUsername().get(), settings.getImportPassword().get());
+          settings.importSettings.credentials.username,
+          String.valueOf(settings.importSettings.credentials.password));
     }
     try (CqlSession session = builder.build()) {
       session.execute("TRUNCATE " + tableName);
@@ -277,6 +275,6 @@ public abstract class TableLiveMigrator extends TableProcessor {
   }
 
   protected String getImportDefaultTimestamp() {
-    return String.valueOf(settings.getImportDefaultTimestamp());
+    return String.valueOf(settings.importSettings.getDefaultTimestampMicros());
   }
 }

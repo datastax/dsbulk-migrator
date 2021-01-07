@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator;
+package com.datastax.cloudgate.migrator.processor;
 
-import com.datastax.cloudgate.migrator.MigrationSettings.TableType;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.settings.TableType;
+import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
@@ -48,19 +50,25 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
             .withString(
                 DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, "DcInferringLoadBalancingPolicy")
             .build();
-    CqlSessionBuilder builder =
-        CqlSession.builder()
-            .addContactPoint(settings.getExportHostAddress())
-            .withConfigLoader(loader);
-    if (settings.getExportUsername().isPresent() && settings.getExportPassword().isPresent()) {
+    CqlSessionBuilder builder = CqlSession.builder().withConfigLoader(loader);
+    if (settings.exportSettings.clusterInfo.bundle != null) {
+      builder.withCloudSecureConnectBundle(settings.exportSettings.clusterInfo.bundle);
+    } else {
+      builder.addContactPoint(settings.exportSettings.clusterInfo.getHostAddress());
+    }
+    if (settings.exportSettings.credentials != null) {
       builder.withAuthCredentials(
-          settings.getExportUsername().get(), settings.getExportPassword().get());
+          settings.exportSettings.credentials.username,
+          String.valueOf(settings.exportSettings.credentials.password));
     }
     builder.withNodeFilter(
-        node -> node.getEndPoint().resolve().equals(settings.getExportHostAddress()));
+        node ->
+            node.getEndPoint()
+                .resolve()
+                .equals(settings.exportSettings.clusterInfo.getHostAddress()));
     List<T> processors = new ArrayList<>();
     try (CqlSession session = builder.build()) {
-      Pattern exportKeyspaces = settings.getKeyspaces();
+      Pattern exportKeyspaces = settings.generalSettings.keyspaces;
       List<CqlIdentifier> keyspaceNames =
           session.getMetadata().getKeyspaces().values().stream()
               .map(KeyspaceMetadata::getName)
@@ -70,14 +78,14 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
       LOGGER.info("Tables to migrate:");
       for (CqlIdentifier keyspaceName : keyspaceNames) {
         KeyspaceMetadata keyspace = session.getMetadata().getKeyspaces().get(keyspaceName);
-        Pattern exportTables = settings.getTables();
-        TableType tableType = settings.getTableType();
+        Pattern exportTables = settings.generalSettings.tables;
+        TableType tableType = settings.generalSettings.tableType;
         List<TableMetadata> tables =
             keyspace.getTables().values().stream()
                 .sorted(Comparator.comparing(t -> t.getName().asInternal()))
                 .filter(table -> !table.isVirtual())
                 .filter(table -> exportTables.matcher(table.getName().asInternal()).matches())
-                .filter(table -> tableType == TableType.BOTH || tableType == getTableType(table))
+                .filter(table -> tableType == TableType.all || tableType == getTableType(table))
                 .collect(Collectors.toList());
         if (!tables.isEmpty()) {
           tables.stream()
@@ -103,7 +111,7 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns);
 
   private static TableType getTableType(TableMetadata table) {
-    return TableUtils.isCounterTable(table) ? TableType.COUNTER : TableType.REGULAR;
+    return TableUtils.isCounterTable(table) ? TableType.counter : TableType.regular;
   }
 
   private static List<ExportedColumn> buildExportedColumns(

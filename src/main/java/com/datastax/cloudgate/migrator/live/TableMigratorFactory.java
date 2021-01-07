@@ -15,9 +15,9 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
-import com.datastax.cloudgate.migrator.ExportedColumn;
-import com.datastax.cloudgate.migrator.MigrationSettings;
-import com.datastax.cloudgate.migrator.TableProcessorFactory;
+import com.datastax.cloudgate.migrator.processor.ExportedColumn;
+import com.datastax.cloudgate.migrator.processor.TableProcessorFactory;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.util.List;
 
@@ -26,10 +26,20 @@ public class TableMigratorFactory extends TableProcessorFactory<TableLiveMigrato
   @Override
   protected TableLiveMigrator create(
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
-    if (settings.isDsbulkEmbedded()) {
+    if (settings.dsBulkSettings.dsbulkEmbedded) {
+      checkEmbeddedDSBulkAvailable();
       return new EmbeddedTableLiveMigrator(table, settings, exportedColumns);
     } else {
       return new ExternalTableLiveMigrator(table, settings, exportedColumns);
+    }
+  }
+
+  private void checkEmbeddedDSBulkAvailable() {
+    try {
+      Class.forName("com.datastax.oss.dsbulk.runner.DataStaxBulkLoader");
+    } catch (ClassNotFoundException e) {
+      throw new IllegalStateException(
+          "DSBulk is not available on the classpath; cannot use embedded mode.");
     }
   }
 }

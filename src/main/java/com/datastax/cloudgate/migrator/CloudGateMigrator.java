@@ -15,42 +15,70 @@
  */
 package com.datastax.cloudgate.migrator;
 
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.joran.JoranConfigurator;
-import ch.qos.logback.core.joran.spi.JoranException;
 import com.datastax.cloudgate.migrator.live.SchemaLiveMigrator;
 import com.datastax.cloudgate.migrator.script.SchemaScriptGenerator;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.settings.VersionProvider;
+import com.datastax.cloudgate.migrator.utils.LoggingUtils;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import org.slf4j.LoggerFactory;
+import picocli.CommandLine;
+import picocli.CommandLine.ArgGroup;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 
+@Command(
+    name = "CloudGateMigrator",
+    description =
+        "A tool to migrate tables between two clusters, leveraging the DataStax Bulk Loader "
+            + "(DSBulk) to perform the actual data migration.",
+    versionProvider = VersionProvider.class,
+    sortOptions = false,
+    usageHelpWidth = 100)
 public class CloudGateMigrator {
 
+  @Option(
+      names = {"-h", "--help"},
+      usageHelp = true,
+      description = "Displays this help message.")
+  boolean usageHelpRequested;
+
+  @Option(
+      names = {"-v", "--version"},
+      versionHelp = true,
+      description = "Displays version info.")
+  boolean versionInfoRequested;
+
   public static void main(String[] args) throws Exception {
-    configureLogging(SchemaLiveMigrator.class.getResource("/logback-migrator.xml"));
-    List<String> arguments = new ArrayList<>(Arrays.asList(args));
-    String command = arguments.remove(0);
-    MigrationSettings settings = new MigrationSettings(arguments);
-    if (command.equals("migrate-live")) {
-      new SchemaLiveMigrator(settings).migrate();
-    } else if (command.equals("generate-script")) {
-      new SchemaScriptGenerator(settings).generate();
-    } else {
-      throw new IllegalArgumentException("Unknown command: " + command);
-    }
+    LoggingUtils.configureLogging(SchemaLiveMigrator.class.getResource("/logback-migrator.xml"));
+    CommandLine commandLine = new CommandLine(new CloudGateMigrator());
+    int exitCode = commandLine.execute(args);
+    System.exit(exitCode);
   }
 
-  public static void configureLogging(URL configurationFile) throws IOException, JoranException {
-    LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-    loggerContext.reset();
-    JoranConfigurator configurator = new JoranConfigurator();
-    try (InputStream configStream = configurationFile.openStream()) {
-      configurator.setContext(loggerContext);
-      configurator.doConfigure(configStream);
-    }
+  @Command(
+      name = "migrate-live",
+      description =
+          "Starts a live data migration using a pre-existing DSBulk installation, "
+              + "or alternatively, the embedded DSBulk version.",
+      optionListHeading = "Available options:%n",
+      abbreviateSynopsis = true,
+      usageHelpWidth = 100)
+  private int migrateLive(@ArgGroup(exclusive = false) MigrationSettings settings) {
+    SchemaLiveMigrator schemaLiveMigrator = new SchemaLiveMigrator(settings);
+    return schemaLiveMigrator.migrate().exitCode();
+  }
+
+  @Command(
+      name = "generate-script",
+      description =
+          "Generates a script that, once executed, will perform a live data migration, "
+              + "using a pre-existing DSBulk installation.",
+      optionListHeading = "Available options:%n",
+      abbreviateSynopsis = true,
+      usageHelpWidth = 100)
+  private int generateScript(@ArgGroup(exclusive = false) MigrationSettings settings)
+      throws IOException {
+    SchemaScriptGenerator schemaScriptGenerator = new SchemaScriptGenerator(settings);
+    return schemaScriptGenerator.generate().exitCode();
   }
 }

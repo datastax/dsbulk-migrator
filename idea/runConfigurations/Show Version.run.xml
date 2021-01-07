@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Show Version" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator"/>
+    <module name="cloud-gate-schema-migrator"/>
+    <option name="PROGRAM_PARAMETERS" value="--version"/>
+    <method v="2">
+      <option name="Make" enabled="true"/>
+    </method>
+  </configuration>
+</component>

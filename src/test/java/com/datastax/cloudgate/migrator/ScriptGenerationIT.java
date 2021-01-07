@@ -19,6 +19,7 @@ import static com.datastax.oss.dsbulk.tests.utils.FileUtils.readFile;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.datastax.cloudgate.migrator.script.SchemaScriptGenerator;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.oss.simulacron.server.BoundCluster;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;

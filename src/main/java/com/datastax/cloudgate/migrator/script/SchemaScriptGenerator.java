@@ -15,8 +15,9 @@
  */
 package com.datastax.cloudgate.migrator.script;
 
-import com.datastax.cloudgate.migrator.MigrationSettings;
-import com.datastax.cloudgate.migrator.TableUtils;
+import com.datastax.cloudgate.migrator.live.ExitStatus;
+import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.TableUtils;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
@@ -44,8 +45,8 @@ public class SchemaScriptGenerator {
         generators.stream().anyMatch(gen -> TableUtils.isCounterTable(gen.getTable()));
   }
 
-  public void generate() throws IOException {
-    Path exportDir = settings.getDataDir();
+  public ExitStatus generate() throws IOException {
+    Path exportDir = settings.generalSettings.dataDir;
     Files.createDirectories(exportDir);
     Path exportScript = exportDir.resolve("cloud-gate-migrator-export.sh");
     Path importScript = exportDir.resolve("cloud-gate-migrator-import.sh");
@@ -92,6 +93,7 @@ public class SchemaScriptGenerator {
       LOGGER.info("Export script (counter tables): {}", exportScriptCounters);
       LOGGER.info("Import script (counter tables): {}", importScriptCounters);
     }
+    return ExitStatus.STATUS_OK;
   }
 
   private void printExportScriptHeader(PrintWriter writer) {
@@ -99,35 +101,50 @@ public class SchemaScriptGenerator {
     writer.println();
     writer.println(
         "bundle=\"${MIGRATOR_EXPORT_BUNDLE:-"
-            + settings.getExportBundle().map(Object::toString).orElse("")
+            + (settings.exportSettings.clusterInfo.bundle != null
+                ? settings.exportSettings.clusterInfo.bundle
+                : "")
             + "}\"");
-    writer.println("host=\"${MIGRATOR_EXPORT_HOST:-" + settings.getExportHostString() + "}\"");
+    writer.println(
+        "host=\"${MIGRATOR_EXPORT_HOST:-"
+            + (settings.exportSettings.clusterInfo.hostAndPort != null
+                ? settings.exportSettings.clusterInfo.hostAndPort
+                : "")
+            + "}\"");
     writer.println(
         "username=\"${MIGRATOR_EXPORT_USERNAME:-"
-            + settings.getExportUsername().map(Object::toString).orElse("")
+            + (settings.exportSettings.credentials != null
+                ? settings.exportSettings.credentials.username
+                : "")
             + "}\"");
     writer.println(
         "password=\"${MIGRATOR_EXPORT_PASSWORD:-"
-            + settings.getExportPassword().map(Object::toString).orElse("")
+            + (settings.exportSettings.credentials != null
+                ? String.valueOf(settings.exportSettings.credentials.password)
+                : "")
             + "}\"");
-    writer.println("dsbulk_cmd=\"${MIGRATOR_EXPORT_CMD:-" + settings.getDsbulkCmd() + "}\"");
     writer.println(
-        "dsbulk_logs=\"${MIGRATOR_EXPORT_LOG_DIR:-" + settings.getDsbulkLogDir() + "}\"");
-    writer.println("data_dir=\"${MIGRATOR_DATA_DIR:-" + settings.getDataDir() + "}\"");
+        "dsbulk_cmd=\"${MIGRATOR_EXPORT_CMD:-" + settings.dsBulkSettings.dsbulkCmd + "}\"");
     writer.println(
-        "max_records=\"${MIGRATOR_EXPORT_MAX_RECORDS:-" + settings.getExportMaxRecords() + "}\"");
+        "dsbulk_logs=\"${MIGRATOR_EXPORT_LOG_DIR:-" + settings.dsBulkSettings.dsbulkLogDir + "}\"");
+    writer.println(
+        "data_dir=\"${MIGRATOR_EXPORT_DATA_DIR:-" + settings.generalSettings.dataDir + "}\"");
+    writer.println(
+        "max_records=\"${MIGRATOR_EXPORT_MAX_RECORDS:-"
+            + settings.exportSettings.maxRecords
+            + "}\"");
     writer.println(
         "max_concurrent_files=\"${MIGRATOR_EXPORT_MAX_CONCURRENT_FILES:-"
-            + settings.getExportMaxConcurrentFiles()
+            + settings.exportSettings.maxConcurrentFiles
             + "}\"");
     writer.println(
         "max_concurrent_queries=\"${MIGRATOR_EXPORT_MAX_CONCURRENT_QUERIES:-"
-            + settings.getExportMaxConcurrentQueries()
+            + settings.exportSettings.maxConcurrentQueries
             + "}\"");
-    writer.println("splits=\"${MIGRATOR_EXPORT_SPLITS:-" + settings.getExportSplits() + "}\"");
+    writer.println("splits=\"${MIGRATOR_EXPORT_SPLITS:-" + settings.exportSettings.splits + "}\"");
     writer.println(
         "consistency_level=\"${MIGRATOR_EXPORT_CONSISTENCY:-"
-            + settings.getExportConsistency()
+            + settings.exportSettings.consistencyLevel
             + "}\"");
     writer.println();
     writer.flush();
@@ -138,39 +155,52 @@ public class SchemaScriptGenerator {
     writer.println();
     writer.println(
         "bundle=\"${MIGRATOR_IMPORT_BUNDLE:-"
-            + settings.getImportBundle().map(Object::toString).orElse("")
+            + (settings.importSettings.clusterInfo.bundle != null
+                ? settings.importSettings.clusterInfo.bundle
+                : "")
             + "}\"");
-    writer.println("host=\"${MIGRATOR_IMPORT_HOST:-" + settings.getImportHostString() + "}\"");
+    writer.println(
+        "host=\"${MIGRATOR_IMPORT_HOST:-"
+            + (settings.importSettings.clusterInfo.hostAndPort != null
+                ? settings.importSettings.clusterInfo.hostAndPort
+                : "")
+            + "}\"");
     writer.println(
         "username=\"${MIGRATOR_IMPORT_USERNAME:-"
-            + settings.getImportUsername().map(Object::toString).orElse("")
+            + (settings.importSettings.credentials != null
+                ? settings.importSettings.credentials.username
+                : "")
             + "}\"");
     writer.println(
         "password=\"${MIGRATOR_IMPORT_PASSWORD:-"
-            + settings.getImportPassword().map(Object::toString).orElse("")
+            + (settings.importSettings.credentials != null
+                ? String.valueOf(settings.importSettings.credentials.password)
+                : "")
             + "}\"");
-    writer.println("dsbulk_cmd=\"${MIGRATOR_IMPORT_CMD:-" + settings.getDsbulkCmd() + "}\"");
     writer.println(
-        "dsbulk_logs=\"${MIGRATOR_IMPORT_LOG_DIR:-" + settings.getDsbulkLogDir() + "}\"");
-    writer.println("data_dir=\"${MIGRATOR_DATA_DIR:-" + settings.getDataDir() + "}\"");
+        "dsbulk_cmd=\"${MIGRATOR_IMPORT_CMD:-" + settings.dsBulkSettings.dsbulkCmd + "}\"");
+    writer.println(
+        "dsbulk_logs=\"${MIGRATOR_IMPORT_LOG_DIR:-" + settings.dsBulkSettings.dsbulkLogDir + "}\"");
+    writer.println(
+        "data_dir=\"${MIGRATOR_IMPORT_DATA_DIR:-" + settings.generalSettings.dataDir + "}\"");
     writer.println(
         "max_concurrent_files=\"${MIGRATOR_IMPORT_MAX_CONCURRENT_FILES:-"
-            + settings.getImportMaxConcurrentFiles()
+            + settings.importSettings.maxConcurrentFiles
             + "}\"");
     writer.println(
         "max_concurrent_queries=\"${MIGRATOR_IMPORT_MAX_CONCURRENT_QUERIES:-"
-            + settings.getImportMaxConcurrentQueries()
+            + settings.importSettings.maxConcurrentQueries
             + "}\"");
     writer.println(
-        "max_errors=\"${MIGRATOR_IMPORT_MAX_ERRORS:-" + settings.getImportMaxErrors() + "}\"");
+        "max_errors=\"${MIGRATOR_IMPORT_MAX_ERRORS:-" + settings.importSettings.maxErrors + "}\"");
     writer.println(
         "consistency_level=\"${MIGRATOR_IMPORT_CONSISTENCY:-"
-            + settings.getImportConsistency()
+            + settings.importSettings.consistencyLevel
             + "}\"");
     if (!counter) {
       writer.println(
           "default_writetime=\"${MIGRATOR_IMPORT_DEFAULT_WRITETIME:-"
-              + settings.getImportDefaultTimestamp()
+              + settings.importSettings.getDefaultTimestampMicros()
               + "}\"");
     }
     writer.println();
