@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.direct;
+package com.datastax.cloudgate.migrator.live;
 
 // copy of DSBulk ExitStatus
 public enum ExitStatus {

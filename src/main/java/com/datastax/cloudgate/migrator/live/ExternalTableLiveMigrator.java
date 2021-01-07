@@ -13,22 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.direct;
+package com.datastax.cloudgate.migrator.live;
 
 import com.datastax.cloudgate.migrator.ExportedColumn;
 import com.datastax.cloudgate.migrator.MigrationSettings;
 import com.datastax.cloudgate.migrator.TableUtils;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
-import com.datastax.oss.dsbulk.runner.DataStaxBulkLoader;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EmbeddedTableMigrator extends TableMigrator {
+public class ExternalTableLiveMigrator extends TableLiveMigrator {
 
-  public static final Logger LOGGER = LoggerFactory.getLogger(EmbeddedTableMigrator.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(ExternalTableLiveMigrator.class);
 
-  public EmbeddedTableMigrator(
+  public ExternalTableLiveMigrator(
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
     super(table, settings, exportedColumns);
   }
@@ -41,8 +40,7 @@ public class EmbeddedTableMigrator extends TableMigrator {
     } else {
       LOGGER.info("Exporting {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(true);
-      String[] args = createExportArgs(operationId).toArray(new String[0]);
-      ExitStatus status = ExitStatus.forCode(new DataStaxBulkLoader(args).run().exitCode());
+      ExitStatus status = invokeExternalDsbulk(createExportArgs(operationId));
       LOGGER.info(
           "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
@@ -66,14 +64,42 @@ public class EmbeddedTableMigrator extends TableMigrator {
       }
       LOGGER.info("Importing {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(false);
-      String[] args = createImportArgs(operationId).toArray(new String[0]);
-      ExitStatus status = ExitStatus.forCode(new DataStaxBulkLoader(args).run().exitCode());
+      ExitStatus status = invokeExternalDsbulk(createImportArgs(operationId));
       LOGGER.info(
           "Import of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
         createImportAckFile(operationId);
       }
       return new TableMigrationReport(this, status, operationId, false);
+    }
+  }
+
+  private ExitStatus invokeExternalDsbulk(List<String> args) {
+    try {
+      ProcessBuilder builder = new ProcessBuilder();
+      args.add(0, settings.getDsbulkCmd());
+      builder.command(args);
+      settings.getDsbulkWorkingDir().ifPresent(dir -> builder.directory(dir.toFile()));
+      builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+      builder.redirectError(ProcessBuilder.Redirect.DISCARD);
+      Process process = builder.start();
+      LOGGER.debug(
+          "Table {}: process started (PID {})",
+          TableUtils.getFullyQualifiedTableName(table),
+          process.pid());
+      int exitCode = process.waitFor();
+      LOGGER.debug(
+          "Table {}: process finished (PID {}, exit code {})",
+          TableUtils.getFullyQualifiedTableName(table),
+          process.pid(),
+          exitCode);
+      return ExitStatus.forCode(exitCode);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return ExitStatus.STATUS_INTERRUPTED;
+    } catch (Exception e) {
+      LOGGER.error("DSBulk invocation failed: {}", e.getMessage());
+      return ExitStatus.STATUS_CRASHED;
     }
   }
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.direct;
+package com.datastax.cloudgate.migrator.live;
 
 import com.datastax.cloudgate.migrator.ExportedColumn;
 import com.datastax.cloudgate.migrator.MigrationSettings;
@@ -21,15 +21,15 @@ import com.datastax.cloudgate.migrator.TableProcessorFactory;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.util.List;
 
-public class TableMigratorFactory extends TableProcessorFactory<TableMigrator> {
+public class TableMigratorFactory extends TableProcessorFactory<TableLiveMigrator> {
 
   @Override
-  protected TableMigrator create(
+  protected TableLiveMigrator create(
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
     if (settings.isDsbulkEmbedded()) {
-      return new EmbeddedTableMigrator(table, settings, exportedColumns);
+      return new EmbeddedTableLiveMigrator(table, settings, exportedColumns);
     } else {
-      return new ExternalTableMigrator(table, settings, exportedColumns);
+      return new ExternalTableLiveMigrator(table, settings, exportedColumns);
     }
   }
 }

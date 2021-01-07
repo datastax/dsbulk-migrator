@@ -13,24 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.direct;
+package com.datastax.cloudgate.migrator.live;
 
 public class TableMigrationReport {
 
-  private final TableMigrator migrator;
+  private final TableLiveMigrator migrator;
   private final ExitStatus status;
   private final String operationId;
   private final boolean export;
 
   public TableMigrationReport(
-      TableMigrator migrator, ExitStatus status, String operationId, boolean export) {
+      TableLiveMigrator migrator, ExitStatus status, String operationId, boolean export) {
     this.migrator = migrator;
     this.status = status;
     this.operationId = operationId;
     this.export = export;
   }
 
-  public TableMigrator getMigrator() {
+  public TableLiveMigrator getMigrator() {
     return migrator;
   }
 

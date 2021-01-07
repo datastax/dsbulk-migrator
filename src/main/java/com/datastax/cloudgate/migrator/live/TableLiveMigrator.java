@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.direct;
+package com.datastax.cloudgate.migrator.live;
 
 import com.datastax.cloudgate.migrator.ExportedColumn;
 import com.datastax.cloudgate.migrator.MigrationSettings;
@@ -38,9 +38,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class TableMigrator extends TableProcessor {
+public abstract class TableLiveMigrator extends TableProcessor {
 
-  private static final Logger LOGGER = LoggerFactory.getLogger(TableMigrator.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(TableLiveMigrator.class);
 
   protected final Path dataDir;
 
@@ -50,7 +50,7 @@ public abstract class TableMigrator extends TableProcessor {
   protected final Path importAckDir;
   protected final Path importAckFile;
 
-  public TableMigrator(
+  public TableLiveMigrator(
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
     super(table, settings, exportedColumns);
     this.dataDir =

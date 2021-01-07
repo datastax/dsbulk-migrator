@@ -19,7 +19,7 @@ import static com.datastax.oss.dsbulk.tests.utils.FileUtils.readAllLinesInDirect
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.datastax.cloudgate.migrator.direct.SchemaMigrator;
+import com.datastax.cloudgate.migrator.live.SchemaLiveMigrator;
 import com.datastax.oss.simulacron.common.cluster.QueryLog;
 import com.datastax.oss.simulacron.server.BoundCluster;
 import java.io.IOException;
@@ -37,7 +37,7 @@ public class SchemaMigrationIT extends ITBase {
     // given
     MigrationSettings settings = createSettings(true);
     // when
-    SchemaMigrator migrator = new SchemaMigrator(settings);
+    SchemaLiveMigrator migrator = new SchemaLiveMigrator(settings);
     migrator.migrate();
     // then
     assertThat(tableDir).exists().isDirectory();
@@ -55,7 +55,7 @@ public class SchemaMigrationIT extends ITBase {
     // given
     MigrationSettings settings = createSettings(false);
     // when
-    SchemaMigrator migrator = new SchemaMigrator(settings);
+    SchemaLiveMigrator migrator = new SchemaLiveMigrator(settings);
     migrator.migrate();
     // then
     assertThat(tableDir).exists().isDirectory();

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.direct;
+package com.datastax.cloudgate.migrator.live;
 
 import com.datastax.cloudgate.migrator.MigrationSettings;
 import com.datastax.cloudgate.migrator.TableUtils;
@@ -33,14 +33,14 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class SchemaMigrator {
+public class SchemaLiveMigrator {
 
-  public static final Logger LOGGER = LoggerFactory.getLogger(SchemaMigrator.class);
+  public static final Logger LOGGER = LoggerFactory.getLogger(SchemaLiveMigrator.class);
 
   private static final Object POISON_PILL = new Object();
 
   private final MigrationSettings settings;
-  private final BlockingQueue<TableMigrator> exportQueue;
+  private final BlockingQueue<TableLiveMigrator> exportQueue;
   private final BlockingQueue<Object> importQueue;
   private final ExecutorService pool;
 
@@ -48,11 +48,11 @@ public class SchemaMigrator {
       new CopyOnWriteArrayList<>();
   private final CopyOnWriteArrayList<TableMigrationReport> failed = new CopyOnWriteArrayList<>();
 
-  private final List<TableMigrator> migrators;
+  private final List<TableLiveMigrator> migrators;
   private final boolean hasRegularTables;
   private final boolean hasCounterTables;
 
-  public SchemaMigrator(MigrationSettings settings) {
+  public SchemaLiveMigrator(MigrationSettings settings) {
     this.settings = settings;
     exportQueue = new LinkedBlockingQueue<>();
     importQueue = new LinkedBlockingQueue<>();
@@ -106,8 +106,8 @@ public class SchemaMigrator {
     }
   }
 
-  private void migrateTables(Predicate<TableMigrator> filter) {
-    List<TableMigrator> filtered = migrators.stream().filter(filter).collect(Collectors.toList());
+  private void migrateTables(Predicate<TableLiveMigrator> filter) {
+    List<TableLiveMigrator> filtered = migrators.stream().filter(filter).collect(Collectors.toList());
     exportQueue.addAll(filtered);
     List<CompletableFuture<?>> futures = new ArrayList<>();
     for (int i = 0; i < settings.getMaxConcurrentOps(); i++) {
@@ -118,7 +118,7 @@ public class SchemaMigrator {
   }
 
   private void exportTables() {
-    TableMigrator migrator;
+    TableLiveMigrator migrator;
     while ((migrator = exportQueue.poll()) != null) {
       TableMigrationReport report;
       try {
@@ -143,13 +143,13 @@ public class SchemaMigrator {
 
   private void importTables() {
     while (true) {
-      TableMigrator migrator;
+      TableLiveMigrator migrator;
       try {
         Object o = importQueue.take();
         if (o == POISON_PILL) {
           break;
         }
-        migrator = (TableMigrator) o;
+        migrator = (TableLiveMigrator) o;
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         break;
@@ -175,7 +175,7 @@ public class SchemaMigrator {
   }
 
   private void checkTruncateOk() {
-    List<TableMigrator> toImport =
+    List<TableLiveMigrator> toImport =
         migrators.stream()
             .filter(migrator -> TableUtils.isCounterTable(migrator.getTable()))
             .filter(migrator -> !migrator.isAlreadyImported())

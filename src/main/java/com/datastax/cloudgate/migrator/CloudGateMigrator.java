@@ -18,7 +18,7 @@ package com.datastax.cloudgate.migrator;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
 import ch.qos.logback.core.joran.spi.JoranException;
-import com.datastax.cloudgate.migrator.direct.SchemaMigrator;
+import com.datastax.cloudgate.migrator.live.SchemaLiveMigrator;
 import com.datastax.cloudgate.migrator.script.SchemaScriptGenerator;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,12 +31,12 @@ import org.slf4j.LoggerFactory;
 public class CloudGateMigrator {
 
   public static void main(String[] args) throws Exception {
-    configureLogging(SchemaMigrator.class.getResource("/logback-migrator.xml"));
+    configureLogging(SchemaLiveMigrator.class.getResource("/logback-migrator.xml"));
     List<String> arguments = new ArrayList<>(Arrays.asList(args));
     String command = arguments.remove(0);
     MigrationSettings settings = new MigrationSettings(arguments);
-    if (command.equals("migrate")) {
-      new SchemaMigrator(settings).migrate();
+    if (command.equals("migrate-live")) {
+      new SchemaLiveMigrator(settings).migrate();
     } else if (command.equals("generate-script")) {
       new SchemaScriptGenerator(settings).generate();
     } else {
