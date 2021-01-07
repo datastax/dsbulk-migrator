@@ -69,6 +69,7 @@ public class MigrationSettings {
   private String importPassword;
   private String importMaxConcurrentFiles = "AUTO";
   private String importMaxConcurrentQueries = "AUTO";
+  private int importMaxErrors = 1000;
   private ConsistencyLevel importConsistency = ConsistencyLevel.LOCAL_QUORUM;
   private long importDefaultTimestamp = 0;
 
@@ -161,6 +162,9 @@ public class MigrationSettings {
           break;
         case "--import.maxConcurrentQueries":
           importMaxConcurrentQueries = it.next();
+          break;
+        case "--import.maxErrors":
+          importMaxErrors = Integer.parseInt(it.next());
           break;
         case "--import.consistency":
           importConsistency = DefaultConsistencyLevel.valueOf(it.next());
@@ -297,6 +301,10 @@ public class MigrationSettings {
 
   public String getImportMaxConcurrentQueries() {
     return importMaxConcurrentQueries;
+  }
+
+  public int getImportMaxErrors() {
+    return importMaxErrors;
   }
 
   public ConsistencyLevel getImportConsistency() {

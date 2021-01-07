@@ -177,6 +177,8 @@ public abstract class TableMigrator extends TableProcessor {
     args.add(settings.getExportSplits());
     args.add("-cl");
     args.add(String.valueOf(settings.getExportConsistency()));
+    args.add("-maxErrors");
+    args.add("0");
     args.add("-header");
     args.add("false");
     args.add("-verbosity");
@@ -216,6 +218,8 @@ public abstract class TableMigrator extends TableProcessor {
     args.add(settings.getImportMaxConcurrentQueries());
     args.add("-cl");
     args.add(String.valueOf(settings.getImportConsistency()));
+    args.add("-maxErrors");
+    args.add(String.valueOf(settings.getImportMaxErrors()));
     args.add("-header");
     args.add("false");
     args.add("-verbosity");

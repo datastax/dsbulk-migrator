@@ -162,6 +162,8 @@ public class SchemaScriptGenerator {
             + settings.getImportMaxConcurrentQueries()
             + "}\"");
     writer.println(
+        "max_errors=\"${MIGRATOR_IMPORT_MAX_ERRORS:-" + settings.getImportMaxErrors() + "}\"");
+    writer.println(
         "consistency_level=\"${MIGRATOR_IMPORT_CONSISTENCY:-"
             + settings.getImportConsistency()
             + "}\"");

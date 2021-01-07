@@ -79,6 +79,7 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("    -maxRecords \"$max_records\" \\");
     writer.println("    -maxConcurrentFiles \"$max_concurrent_files\" \\");
     writer.println("    -maxConcurrentQueries \"$max_concurrent_queries\" \\");
+    writer.println("    -maxErrors 0 \\");
     writer.println("    --schema.splits \"$splits\" \\");
     writer.println("    -cl \"$consistency_level\" \\");
     writer.println("    -header false \\");
@@ -129,6 +130,7 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("    $([[ -z \"$username\" ]] || echo \"-u \\\"${username}\\\"\") \\");
     writer.println("    $([[ -z \"$password\" ]] || echo \"-p \\\"${password}\\\"\") \\");
     writer.println("    -url " + dataDir + " \\");
+    writer.println("    -maxErrors \"$max_errors\" \\");
     writer.println("    -maxConcurrentFiles \"$max_concurrent_files\" \\");
     writer.println("    -maxConcurrentQueries \"$max_concurrent_queries\" \\");
     writer.println("    -cl \"$consistency_level\" \\");
