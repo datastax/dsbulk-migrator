@@ -92,7 +92,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
   }
 
   protected String checkAlreadyExported() {
-    if (Files.exists(exportAckFile)) {
+    if (isAlreadyExported()) {
       try {
         String operationId = Files.readString(exportAckFile);
         if (operationId != null && !operationId.isBlank()) {
@@ -110,7 +110,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
   }
 
   protected String checkAlreadyImported() {
-    if (Files.exists(importAckFile)) {
+    if (isAlreadyImported()) {
       try {
         String operationId = Files.readString(importAckFile);
         if (operationId != null && !operationId.isBlank()) {
@@ -249,7 +249,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
   }
 
   protected void truncateTable() {
-    LOGGER.info("Truncating {} on target cluster...", TableUtils.getFullyQualifiedTableName(table));
+    String tableName = TableUtils.getFullyQualifiedTableName(table);
+    LOGGER.info("Truncating {} on target cluster...", tableName);
     DriverConfigLoader loader =
         DriverConfigLoader.programmaticBuilder()
             .withString(
@@ -266,10 +267,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
           settings.getImportUsername().get(), settings.getImportPassword().get());
     }
     try (CqlSession session = builder.build()) {
-      session.execute("TRUNCATE " + TableUtils.getFullyQualifiedTableName(table));
-      LOGGER.info(
-          "Successfully truncated {} on target cluster",
-          TableUtils.getFullyQualifiedTableName(table));
+      session.execute("TRUNCATE " + tableName);
+      LOGGER.info("Successfully truncated {} on target cluster", tableName);
     }
   }
 

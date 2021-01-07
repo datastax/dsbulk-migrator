@@ -185,12 +185,13 @@ public class SchemaLiveMigrator {
       System.err.println("WARNING!");
       System.err.println("Counter tables must be truncated before importing data.");
       System.err.println(
-          "If you agree to proceed, the following tables WILL BE TRUNCATED on the TARGET cluster "
-              + "(the origin cluster will NOT be affected):");
+          "If you agree to proceed, the following tables WILL BE TRUNCATED on the TARGET cluster:");
       toImport.forEach(
           migrator ->
               System.err.printf(
                   "- %s%n", TableUtils.getFullyQualifiedTableName(migrator.getTable())));
+      System.err.println(
+          "Note that the above tables will NOT be truncated on the origin cluster.");
       while (true) {
         System.err.printf("Are you OK proceeding with the migration? (y/N)%n");
         Scanner scanner = new Scanner(System.in);
