@@ -16,6 +16,7 @@
 package com.datastax.cloudgate.migrator.script;
 
 import com.datastax.cloudgate.migrator.MigrationSettings;
+import com.datastax.cloudgate.migrator.TableUtils;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
@@ -31,10 +32,16 @@ public class SchemaScriptGenerator {
 
   private final List<TableScriptGenerator> generators;
   private final MigrationSettings settings;
+  private final boolean hasRegularTables;
+  private final boolean hasCounterTables;
 
   public SchemaScriptGenerator(MigrationSettings settings) {
     this.settings = settings;
     generators = new TableScriptGeneratorFactory().create(settings);
+    hasRegularTables =
+        generators.stream().anyMatch(gen -> !TableUtils.isCounterTable(gen.getTable()));
+    hasCounterTables =
+        generators.stream().anyMatch(gen -> TableUtils.isCounterTable(gen.getTable()));
   }
 
   public void generate() throws IOException {
@@ -42,20 +49,49 @@ public class SchemaScriptGenerator {
     Files.createDirectories(exportDir);
     Path exportScript = exportDir.resolve("cloud-gate-migrator-export.sh");
     Path importScript = exportDir.resolve("cloud-gate-migrator-import.sh");
-    try (PrintWriter exportWriter =
-            new PrintWriter(Files.newBufferedWriter(exportScript, StandardCharsets.UTF_8));
-        PrintWriter importWriter =
-            new PrintWriter(Files.newBufferedWriter(importScript, StandardCharsets.UTF_8))) {
-      printExportScriptHeader(exportWriter);
-      printImportScriptHeader(importWriter);
-      for (TableScriptGenerator generator : generators) {
-        generator.printExportScript(exportWriter);
-        generator.printImportScript(importWriter);
+    if (hasRegularTables) {
+      try (PrintWriter exportWriter =
+              new PrintWriter(Files.newBufferedWriter(exportScript, StandardCharsets.UTF_8));
+          PrintWriter importWriter =
+              new PrintWriter(Files.newBufferedWriter(importScript, StandardCharsets.UTF_8))) {
+        printExportScriptHeader(exportWriter);
+        printImportScriptHeader(importWriter, false);
+        for (TableScriptGenerator generator : generators) {
+          if (!TableUtils.isCounterTable(generator.getTable())) {
+            generator.printExportScript(exportWriter);
+            generator.printImportScript(importWriter);
+          }
+        }
+      }
+    }
+    Path exportScriptCounters = exportDir.resolve("cloud-gate-migrator-export-counters.sh");
+    Path importScriptCounters = exportDir.resolve("cloud-gate-migrator-import-counters.sh");
+    if (hasCounterTables) {
+      try (PrintWriter exportWriter =
+              new PrintWriter(
+                  Files.newBufferedWriter(exportScriptCounters, StandardCharsets.UTF_8));
+          PrintWriter importWriter =
+              new PrintWriter(
+                  Files.newBufferedWriter(importScriptCounters, StandardCharsets.UTF_8))) {
+        printExportScriptHeader(exportWriter);
+        printImportScriptHeader(importWriter, true);
+        for (TableScriptGenerator generator : generators) {
+          if (TableUtils.isCounterTable(generator.getTable())) {
+            generator.printExportScript(exportWriter);
+            generator.printImportScript(importWriter);
+          }
+        }
       }
     }
     LOGGER.info("Scripts successfully generated:");
-    LOGGER.info("Export script: {}", exportScript);
-    LOGGER.info("Import script: {}", importScript);
+    if (hasRegularTables) {
+      LOGGER.info("Export script: {}", exportScript);
+      LOGGER.info("Import script: {}", importScript);
+    }
+    if (hasCounterTables) {
+      LOGGER.info("Export script (counter tables): {}", exportScriptCounters);
+      LOGGER.info("Import script (counter tables): {}", importScriptCounters);
+    }
   }
 
   private void printExportScriptHeader(PrintWriter writer) {
@@ -97,7 +133,7 @@ public class SchemaScriptGenerator {
     writer.flush();
   }
 
-  private void printImportScriptHeader(PrintWriter writer) {
+  private void printImportScriptHeader(PrintWriter writer, boolean counter) {
     writer.println("#!/bin/bash");
     writer.println();
     writer.println(
@@ -129,10 +165,12 @@ public class SchemaScriptGenerator {
         "consistency_level=\"${MIGRATOR_IMPORT_CONSISTENCY:-"
             + settings.getImportConsistency()
             + "}\"");
-    writer.println(
-        "default_writetime=\"${MIGRATOR_IMPORT_DEFAULT_WRITETIME:-"
-            + settings.getImportDefaultTimestamp()
-            + "}\"");
+    if (!counter) {
+      writer.println(
+          "default_writetime=\"${MIGRATOR_IMPORT_DEFAULT_WRITETIME:-"
+              + settings.getImportDefaultTimestamp()
+              + "}\"");
+    }
     writer.println();
     writer.flush();
   }

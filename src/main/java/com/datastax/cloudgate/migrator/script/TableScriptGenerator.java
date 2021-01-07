@@ -18,6 +18,7 @@ package com.datastax.cloudgate.migrator.script;
 import com.datastax.cloudgate.migrator.ExportedColumn;
 import com.datastax.cloudgate.migrator.MigrationSettings;
 import com.datastax.cloudgate.migrator.TableProcessor;
+import com.datastax.cloudgate.migrator.TableUtils;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.io.PrintWriter;
 import java.util.List;
@@ -56,7 +57,7 @@ public class TableScriptGenerator extends TableProcessor {
   }
 
   public void printExportScript(PrintWriter writer) {
-    writer.println("echo 'Exporting table " + getFullyQualifiedTableName() + "'");
+    writer.println("echo 'Exporting table " + TableUtils.getFullyQualifiedTableName(table) + "'");
     writer.println("if [[ -f " + exportAckFile + " ]]; then");
     writer.println(
         "  echo \"Table "
@@ -110,7 +111,7 @@ public class TableScriptGenerator extends TableProcessor {
   }
 
   public void printImportScript(PrintWriter writer) {
-    writer.println("echo 'Importing table " + getFullyQualifiedTableName() + "'");
+    writer.println("echo 'Importing table " + TableUtils.getFullyQualifiedTableName(table) + "'");
     writer.println("if [[ -f " + importAckFile + " ]]; then");
     writer.println(
         "  echo \"Table "

@@ -17,6 +17,7 @@ package com.datastax.cloudgate.migrator.direct;
 
 import com.datastax.cloudgate.migrator.ExportedColumn;
 import com.datastax.cloudgate.migrator.MigrationSettings;
+import com.datastax.cloudgate.migrator.TableUtils;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.datastax.oss.dsbulk.runner.DataStaxBulkLoader;
 import java.util.List;
@@ -38,11 +39,12 @@ public class EmbeddedTableMigrator extends TableMigrator {
     if ((operationId = checkAlreadyExported()) != null) {
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
     } else {
-      LOGGER.info("Exporting {}...", getFullyQualifiedTableName());
+      LOGGER.info("Exporting {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(true);
       String[] args = createExportArgs(operationId).toArray(new String[0]);
       ExitStatus status = ExitStatus.forCode(new DataStaxBulkLoader(args).run().exitCode());
-      LOGGER.info("Export of {} finished with {}", getFullyQualifiedTableName(), status);
+      LOGGER.info(
+          "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
       }
@@ -55,14 +57,19 @@ public class EmbeddedTableMigrator extends TableMigrator {
     String operationId;
     if ((operationId = checkAlreadyImported()) != null) {
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, false);
-    } else if (checkNotYetExported()) {
-      return new TableMigrationReport(this, ExitStatus.STATUS_ABORTED_FATAL_ERROR, null, false);
+    } else if (!isAlreadyExported()) {
+      throw new IllegalStateException(
+          "Cannot import non-exported table: " + TableUtils.getFullyQualifiedTableName(table));
     } else {
-      LOGGER.info("Importing {}...", getFullyQualifiedTableName());
+      if (TableUtils.isCounterTable(table)) {
+        truncateTable();
+      }
+      LOGGER.info("Importing {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(false);
       String[] args = createImportArgs(operationId).toArray(new String[0]);
       ExitStatus status = ExitStatus.forCode(new DataStaxBulkLoader(args).run().exitCode());
-      LOGGER.info("Import of {} finished with {}", getFullyQualifiedTableName(), status);
+      LOGGER.info(
+          "Import of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
         createImportAckFile(operationId);
       }

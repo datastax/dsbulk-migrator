@@ -17,6 +17,7 @@ package com.datastax.cloudgate.migrator.direct;
 
 import com.datastax.cloudgate.migrator.ExportedColumn;
 import com.datastax.cloudgate.migrator.MigrationSettings;
+import com.datastax.cloudgate.migrator.TableUtils;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.util.List;
 import org.slf4j.Logger;
@@ -37,10 +38,11 @@ public class ExternalTableMigrator extends TableMigrator {
     if ((operationId = checkAlreadyExported()) != null) {
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
     } else {
-      LOGGER.info("Exporting {}...", getFullyQualifiedTableName());
+      LOGGER.info("Exporting {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(true);
       ExitStatus status = invokeExternalDsbulk(createExportArgs(operationId));
-      LOGGER.info("Export of {} finished with {}", getFullyQualifiedTableName(), status);
+      LOGGER.info(
+          "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
       }
@@ -53,13 +55,18 @@ public class ExternalTableMigrator extends TableMigrator {
     String operationId;
     if ((operationId = checkAlreadyImported()) != null) {
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, false);
-    } else if (checkNotYetExported()) {
-      return new TableMigrationReport(this, ExitStatus.STATUS_ABORTED_FATAL_ERROR, null, false);
+    } else if (!isAlreadyExported()) {
+      throw new IllegalStateException(
+          "Cannot import non-exported table: " + TableUtils.getFullyQualifiedTableName(table));
     } else {
-      LOGGER.info("Importing {}...", getFullyQualifiedTableName());
+      if (TableUtils.isCounterTable(table)) {
+        truncateTable();
+      }
+      LOGGER.info("Importing {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(false);
       ExitStatus status = invokeExternalDsbulk(createImportArgs(operationId));
-      LOGGER.info("Import of {} finished with {}", getFullyQualifiedTableName(), status);
+      LOGGER.info(
+          "Import of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
         createImportAckFile(operationId);
       }
@@ -77,11 +84,13 @@ public class ExternalTableMigrator extends TableMigrator {
       builder.redirectError(ProcessBuilder.Redirect.DISCARD);
       Process process = builder.start();
       LOGGER.debug(
-          "Table {}: process started (PID {})", getFullyQualifiedTableName(), process.pid());
+          "Table {}: process started (PID {})",
+          TableUtils.getFullyQualifiedTableName(table),
+          process.pid());
       int exitCode = process.waitFor();
       LOGGER.debug(
           "Table {}: process finished (PID {}, exit code {})",
-          getFullyQualifiedTableName(),
+          TableUtils.getFullyQualifiedTableName(table),
           process.pid(),
           exitCode);
       return ExitStatus.forCode(exitCode);

@@ -35,8 +35,8 @@ public abstract class TableProcessor {
     this.exportedColumns = exportedColumns;
   }
 
-  public String getFullyQualifiedTableName() {
-    return String.format("%s.%s", table.getKeyspace().asCql(true), table.getName().asCql(true));
+  public TableMetadata getTable() {
+    return table;
   }
 
   protected String buildExportQuery() {

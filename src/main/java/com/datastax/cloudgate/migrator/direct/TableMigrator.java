@@ -18,6 +18,11 @@ package com.datastax.cloudgate.migrator.direct;
 import com.datastax.cloudgate.migrator.ExportedColumn;
 import com.datastax.cloudgate.migrator.MigrationSettings;
 import com.datastax.cloudgate.migrator.TableProcessor;
+import com.datastax.cloudgate.migrator.TableUtils;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.CqlSessionBuilder;
+import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
+import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -78,39 +83,44 @@ public abstract class TableMigrator extends TableProcessor {
         timestamp);
   }
 
+  public boolean isAlreadyExported() {
+    return Files.exists(exportAckFile);
+  }
+
+  public boolean isAlreadyImported() {
+    return Files.exists(importAckFile);
+  }
+
   protected String checkAlreadyExported() {
     if (Files.exists(exportAckFile)) {
-      LOGGER.warn(
-          "Table {}.{}: already exported, skipping (delete this file to re-export: {}).",
-          table.getKeyspace(),
-          table.getName(),
-          exportAckFile);
       try {
-        return Files.readString(exportAckFile);
+        String operationId = Files.readString(exportAckFile);
+        if (operationId != null && !operationId.isBlank()) {
+          LOGGER.warn(
+              "Table {}.{}: already exported, skipping (delete this file to re-export: {}).",
+              table.getKeyspace(),
+              table.getName(),
+              exportAckFile);
+          return operationId;
+        }
       } catch (IOException ignored) {
       }
     }
     return null;
   }
 
-  protected boolean checkNotYetExported() {
-    if (!Files.exists(exportAckFile)) {
-      LOGGER.warn(
-          "Table {}.{}: not yet exported, skipping import.", table.getKeyspace(), table.getName());
-      return true;
-    }
-    return false;
-  }
-
   protected String checkAlreadyImported() {
     if (Files.exists(importAckFile)) {
-      LOGGER.warn(
-          "Table {}.{}: already imported, skipping (delete this file to re-import: {}).",
-          table.getKeyspace(),
-          table.getName(),
-          importAckFile);
       try {
-        return Files.readString(importAckFile);
+        String operationId = Files.readString(importAckFile);
+        if (operationId != null && !operationId.isBlank()) {
+          LOGGER.warn(
+              "Table {}.{}: already imported, skipping (delete this file to re-import: {}).",
+              table.getKeyspace(),
+              table.getName(),
+              importAckFile);
+          return operationId;
+        }
       } catch (IOException ignored) {
       }
     }
@@ -232,6 +242,31 @@ public abstract class TableMigrator extends TableProcessor {
       args.add(buildBatchImportQuery());
     }
     return args;
+  }
+
+  protected void truncateTable() {
+    LOGGER.info("Truncating {} on target cluster...", TableUtils.getFullyQualifiedTableName(table));
+    DriverConfigLoader loader =
+        DriverConfigLoader.programmaticBuilder()
+            .withString(
+                DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, "DcInferringLoadBalancingPolicy")
+            .build();
+    CqlSessionBuilder builder = CqlSession.builder().withConfigLoader(loader);
+    if (settings.getImportBundle().isPresent()) {
+      builder.withCloudSecureConnectBundle(settings.getImportBundle().get());
+    } else {
+      builder.addContactPoint(settings.getImportHostAddress());
+    }
+    if (settings.getImportUsername().isPresent() && settings.getImportPassword().isPresent()) {
+      builder.withAuthCredentials(
+          settings.getImportUsername().get(), settings.getImportPassword().get());
+    }
+    try (CqlSession session = builder.build()) {
+      session.execute("TRUNCATE " + TableUtils.getFullyQualifiedTableName(table));
+      LOGGER.info(
+          "Successfully truncated {} on target cluster",
+          TableUtils.getFullyQualifiedTableName(table));
+    }
   }
 
   protected String escape(String text) {

@@ -15,6 +15,7 @@
  */
 package com.datastax.cloudgate.migrator;
 
+import com.datastax.cloudgate.migrator.MigrationSettings.TableType;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
@@ -70,19 +71,22 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
       for (CqlIdentifier keyspaceName : keyspaceNames) {
         KeyspaceMetadata keyspace = session.getMetadata().getKeyspaces().get(keyspaceName);
         Pattern exportTables = settings.getTables();
+        TableType tableType = settings.getTableType();
         List<TableMetadata> tables =
             keyspace.getTables().values().stream()
                 .sorted(Comparator.comparing(t -> t.getName().asInternal()))
+                .filter(table -> !table.isVirtual())
                 .filter(table -> exportTables.matcher(table.getName().asInternal()).matches())
+                .filter(table -> tableType == TableType.BOTH || tableType == getTableType(table))
                 .collect(Collectors.toList());
         if (!tables.isEmpty()) {
           tables.stream()
               .map(
-                  tableMetadata ->
-                      "- "
-                          + tableMetadata.getKeyspace().asCql(true)
-                          + "."
-                          + tableMetadata.getName().asCql(true))
+                  table ->
+                      String.format(
+                          "- %s (%s table)",
+                          TableUtils.getFullyQualifiedTableName(table),
+                          TableUtils.isCounterTable(table) ? "counter" : "regular"))
               .forEach(LOGGER::info);
           for (TableMetadata table : tables) {
             List<ExportedColumn> exportedColumns = buildExportedColumns(table, session);
@@ -97,6 +101,10 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
 
   protected abstract T create(
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns);
+
+  private static TableType getTableType(TableMetadata table) {
+    return TableUtils.isCounterTable(table) ? TableType.COUNTER : TableType.REGULAR;
+  }
 
   private static List<ExportedColumn> buildExportedColumns(
       TableMetadata table, CqlSession session) {

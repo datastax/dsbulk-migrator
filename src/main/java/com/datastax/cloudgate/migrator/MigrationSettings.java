@@ -30,12 +30,20 @@ import java.util.regex.Pattern;
 
 public class MigrationSettings {
 
+  public enum TableType {
+    REGULAR,
+    COUNTER,
+    BOTH
+  }
+
   // General settings
 
   private Path dataDir = Paths.get("export").normalize().toAbsolutePath();
   private Pattern keyspaces = Pattern.compile("^(?!system|dse|OpsCenter)\\w+$");
   private Pattern tables = Pattern.compile(".*");
   private int maxConcurrentOps = 1;
+  private TableType tableType = TableType.BOTH;
+  private boolean checkTruncateOk = true;
 
   // Export settings
 
@@ -88,6 +96,12 @@ public class MigrationSettings {
           break;
         case "--tables":
           tables = Pattern.compile(it.next());
+          break;
+        case "--tableTypes":
+          tableType = TableType.valueOf(it.next());
+          break;
+        case "--checkTruncateOk":
+          checkTruncateOk = Boolean.parseBoolean(it.next());
           break;
         case "--maxConcurrentOps":
           maxConcurrentOps = Integer.parseInt(it.next());
@@ -203,6 +217,14 @@ public class MigrationSettings {
 
   public Pattern getTables() {
     return tables;
+  }
+
+  public TableType getTableType() {
+    return tableType;
+  }
+
+  public boolean isCheckTruncateOk() {
+    return checkTruncateOk;
   }
 
   public int getMaxConcurrentOps() {
