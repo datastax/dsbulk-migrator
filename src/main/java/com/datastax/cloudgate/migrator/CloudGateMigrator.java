@@ -29,8 +29,8 @@ import picocli.CommandLine.Option;
 @Command(
     name = "CloudGateMigrator",
     description =
-        "A tool to migrate tables between two clusters, leveraging the DataStax Bulk Loader "
-            + "(DSBulk) to perform the actual data migration.",
+        "A tool to migrate historical data between two clusters, "
+            + "leveraging the DataStax Bulk Loader (DSBulk) to perform the actual data migration.",
     versionProvider = VersionProvider.class,
     sortOptions = false,
     usageHelpWidth = 100)

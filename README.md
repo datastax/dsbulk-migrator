@@ -1,1 +1,230 @@
-# cloud-gate-schema-migrator
+# CloudGate Historical Data Migrator
+
+A tool to migrate tables between two clusters, leveraging the DataStax Bulk Loader (DSBulk) to
+perform the actual data migration.
+
+The tool has two main commands:
+
+* `migrate-live` starts a live data migration using a pre-existing DSBulk installation, or
+  alternatively, the embedded DSBulk version. A "live" migration means that the data migration will
+  start immediately and will be performed by this migrator tool through the desired DSBulk
+  installation.
+
+* `generate-script` generates a migration script that, once executed, will perform the desired data
+  migration, using a pre-existing DSBulk installation. Please note: this command does not actually
+  migrate the data; it only generates the migration script.
+  
+## Building
+
+Build is done with Maven:
+
+    mvn clean package
+
+The build produces two distributable fat jars:
+
+* `schema-migrator-<VERSION>-embedded-driver.jar` : contains an embedded Java driver; suitable for
+  live migrations using an external DSBulk, or for script generation. This jar is NOT suitable for
+  live migrations using an embedded DSBulk, since no DSBulk classes are present.
+
+* `schema-migrator-<VERSION>-embedded-dsbulk.jar`: contains an embedded DSBulk and an embedded Java
+  driver; suitable for all operations. Note that this jar is much bigger than the previous one, due
+  to the presence of DSBulk classes.
+
+## Testing
+
+The project contains a few integration tests. Run them with:
+
+    mvn clean verify
+
+The integration tests require [Simulacron](https://github.com/datastax/simulacron). Be sure to meet
+all the [prerequisites](https://github.com/datastax/simulacron#prerequisites) before running the
+tests.
+
+## Running
+
+Launch the tool as follows:
+
+    java -jar /path/to/schema-migrator.jar (migrate-live|generate-script) [OPTIONS]
+
+When doing a live migration, the options are used to effectively configure DSBulk and to connect to
+the clusters.
+
+When generating a migration script, most options serve as default values in the generated scripts.
+Note however that, even when generating scripts, this tool still needs to access the origin cluster
+in order to gather metadata about the tables to migrate.
+
+The following options are available for both commands `migrate-live` and `generate-script`; most
+have sensible default values and do not need to be specified, unless you want to override the
+default value:
+
+```
+  -d, --data-dir=PATH        The directory where data will be exported to and imported from.The
+                               default is a 'data' subdirectory in the current working directory.
+                               The data directory will be created if it does not exist. Tables will
+                               be exported and imported in subdirectories of the data directory
+                               specified here; there will be one subdirectory per keyspace inside
+                               the data directory, then one subdirectory per table inside each
+                               keyspace directory.
+      --dsbulk-external-cmd=CMD
+                             The external DSBulk command to use. Ignored if the embedded DSBulk is
+                               being used. The default is simply 'dsbulk', assuming that the
+                               command is available through the PATH variable contents.
+      --dsbulk-log-dir=PATH  The directory where DSBulk should store its logs. The default is a
+                               'logs' subdirectory in the current working directory. This
+                               subdirectory will be created if it does not exist. Each DSBulk
+                               operation will create a subdirectory inside the log directory
+                               specified here.
+      --dsbulk-use-embedded  Use the embedded DSBulk version instead of an external one. The
+                               default is to use an external DSBulk command.
+      --dsbulk-working-dir=PATH
+                             The directory where DSBulk should be executed. Ignored if the embedded
+                               DSBulk is being used. If unspecified, it defaults to the current
+                               working directory.
+      --export-bundle=PATH   The path to a secure connect bundle to connect to the origin cluster,
+                               if that cluster is a DataStax Astra cluster. Options --export-host
+                               and --export-bundle are mutually exclusive.
+      --export-consistency=CONSISTENCY
+                             The consistency level to use when exporting data. The default is
+                               LOCAL_QUORUM.
+      --export-host=HOST[:PORT]
+                             The host name or IP and, optionally, the port of a node from the
+                               origin cluster. If the port is not specified, it will default to
+                               9042. Options --export-host and --export-bundle are mutually
+                               exclusive.
+      --export-max-concurrent-files=NUM|AUTO
+                             The maximum number of concurrent files to write to. Must be a positive
+                               number or the special value AUTO. The default is AUTO.
+      --export-max-concurrent-queries=NUM|AUTO
+                             The maximum number of concurrent queries to execute. Must be a
+                               positive number or the special value AUTO. The default is AUTO.
+      --export-max-records=NUM
+                             The maximum number of records to export for each table. Must be a
+                               positive number or -1. The default is -1 (export the entire table).
+      --export-password      The password to use to authenticate against the origin cluster.
+                               Options --export-username and --export-password must be provided
+                               together, or not at all. Omit the parameter value to be prompted for
+                               the password interactively.
+      --export-splits=NUM|NC The maximum number of token range queries to generate. Use the NC
+                               syntax to specify a multiple of the number of available cores, e.g.
+                               8C = 8 times the number of available cores. The default is 8C.
+      --export-username=STRING
+                             The username to use to authenticate against the origin cluster.
+                               Options --export-username and --export-password must be provided
+                               together, or not at all.
+  -h, --help                 Displays this help message.
+      --import-bundle=PATH   The path to a secure connect bundle to connect to the target cluster,
+                               if that cluster is a DataStax Astra cluster. Options --export-host
+                               and --export-bundle are mutually exclusive.
+      --import-consistency=CONSISTENCY
+                             The consistency level to use when importing data. The default is
+                               LOCAL_QUORUM.
+      --import-default-timestamp=<defaultTimestamp>
+                             The default timestamp to use when importing data. Must be a valid
+                               instant in ISO-8601 syntax. The default is 1970-01-01T00:00:00Z.
+      --import-host=HOST[:PORT]
+                             The host name or IP and, optionally, the port of a node from the
+                               target cluster. If the port is not specified, it will default to
+                               9042. Options --export-host and --export-bundle are mutually
+                               exclusive.
+      --import-max-concurrent-files=NUM|AUTO
+                             The maximum number of concurrent files to read from. Must be a
+                               positive number or the special value AUTO. The default is AUTO.
+      --import-max-concurrent-queries=NUM|AUTO
+                             The maximum number of concurrent queries to execute. Must be a
+                               positive number or the special value AUTO. The default is AUTO.
+      --import-max-errors=NUM
+                             The maximum number of failed records to tolerate when importing data.
+                               The default is 1000. Failed records will appear in a load.bad file
+                               inside the DSBulk operation directory.
+      --import-password      The password to use to authenticate against the target cluster.
+                               Options --export-username and --export-password must be provided
+                               together, or not at all. Omit the parameter value to be prompted for
+                               the password interactively.
+      --import-username=STRING
+                             The username to use to authenticate against the target cluster.
+                               Options --export-username and --export-password must be provided
+                               together, or not at all.
+  -k, --keyspaces=REGEX      A regular expression to select keyspaces to migrate. The default is to
+                               migrate all keyspaces except system keyspaces, DSE-specific
+                               keyspaces, and the OpsCenter keyspace. Case-sensitive keyspace names
+                               must be entered in their exact case.
+      --max-concurrent-ops=NUM
+                             The maximum number of concurrent operations (exports and imports) to
+                               carry. Default is 1. Set this to higher values to allow exports and
+                               imports to occur concurrently; e.g. with a value of 2, each table
+                               will be imported as soon as it is exported, while the next table is
+                               being exported.
+      --skip-truncate-confirmation
+                             Skip truncate confirmation before actually truncating tables. Only
+                               applicable when migrating counter tables, ignored otherwise.
+  -t, --tables=REGEX         A regular expression to select tables to migrate.The default is to
+                               migrate all tables inside the keyspaces that were selected for
+                               migration with --keyspaces. Case-sensitive table names must be
+                               entered in their exact case.
+      --table-types=regular|counter|all
+                             The table types to migrate (regular, counter, or all). Default is all.
+      --truncate-before-export
+                             Truncate tables before the export instead of after. Default is to
+                               truncate after the export. Only applicable when migrating counter
+                               tables, ignored otherwise.
+```
+
+## Getting help
+
+Global help is available as follows:
+
+    java -jar /path/to/schema-migrator.jar --help
+
+This will print help about the available commands.
+
+Per-command help is available as follows:
+
+    java -jar /path/to/schema-migrator.jar (migrate-live|generate-script) --help
+
+This will print detailed help about the selected command along with all the available options.
+
+## Examples
+
+Generate a migration script to migrate from an existing cluster to an Astra cluster:
+
+    java -jar target/schema-migrator-<VERSION>-embedded-driver.jar migrate-live \
+        --data-dir=/path/to/data/dir \
+        --dsbulk-cmd=${DSBULK_ROOT}/bin/dsbulk \
+        --dsbulk-log-dir=/path/to/log/dir \
+        --export-host=my-origin-cluster.com \
+        --export-username=user1 \
+        --export-password=s3cr3t \
+        --import-bundle=/path/to/bundle \
+        --import-username=user1 \
+        --import-password=s3cr3t
+
+Migrate live from an existing cluster to an Astra cluster using an external DSBulk installation;
+passwords will be prompted interactively:
+
+    java -jar target/schema-migrator-<VERSION>-embedded-driver.jar migrate-live \
+        --data-dir=/path/to/data/dir \
+        --dsbulk-cmd=${DSBULK_ROOT}/bin/dsbulk \
+        --dsbulk-log-dir=/path/to/log/dir \
+        --export-host=my-origin-cluster.com \
+        --export-username=user1 \
+        --export-password # password will be prompted \
+        --import-bundle=/path/to/bundle \
+        --import-username=user1 \
+        --import-password # password will be prompted
+
+Migrate live from an existing cluster to an Astra cluster using the embedded DSBulk installation;
+passwords will be prompted interactively:
+
+    java -jar target/schema-migrator-<VERSION>-embedded-dsbulk.jar migrate-live \
+        --data-dir=/path/to/data/dir \
+        --dsbulk-use-embedded \
+        --dsbulk-log-dir=/path/to/log/dir \
+        --export-host=my-origin-cluster.com \
+        --export-username=user1 \
+        --export-password # password will be prompted \
+        --import-bundle=/path/to/bundle \
+        --import-username=user1 \
+        --import-password # password will be prompted
+
+Note that for the last example, you must use the `schema-migrator-<VERSION>-embedded-dsbulk.jar` fat
+jar, otherwise, an error will be raised because no embedded DSBulk can be found.
