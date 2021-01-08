@@ -44,6 +44,7 @@ public class MigrationSettings {
   private int maxConcurrentOps = 1;
   private TableType tableType = TableType.BOTH;
   private boolean checkTruncateOk = true;
+  private boolean truncateAfterExport = true;
 
   // Export settings
 
@@ -103,6 +104,9 @@ public class MigrationSettings {
           break;
         case "--checkTruncateOk":
           checkTruncateOk = Boolean.parseBoolean(it.next());
+          break;
+        case "--truncateAfterExport":
+          truncateAfterExport = Boolean.parseBoolean(it.next());
           break;
         case "--maxConcurrentOps":
           maxConcurrentOps = Integer.parseInt(it.next());
@@ -229,6 +233,10 @@ public class MigrationSettings {
 
   public boolean isCheckTruncateOk() {
     return checkTruncateOk;
+  }
+
+  public boolean isTruncateAfterExport() {
+    return truncateAfterExport;
   }
 
   public int getMaxConcurrentOps() {

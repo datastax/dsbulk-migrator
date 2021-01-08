@@ -184,7 +184,8 @@ public class SchemaLiveMigrator {
         // Bypass the logging system and hit System.err directly
         System.err.println("WARNING!");
         System.err.println(
-            "After they are exported, counter tables must be truncated on the target cluster.");
+            (settings.isTruncateAfterExport() ? "After" : "Before")
+                + " they are exported, counter tables must be truncated on the target cluster.");
         System.err.println(
             "If you agree to proceed, the following tables WILL BE TRUNCATED on the TARGET cluster:");
         remainingCounterTables.forEach(

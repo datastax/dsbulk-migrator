@@ -39,6 +39,9 @@ public class EmbeddedTableLiveMigrator extends TableLiveMigrator {
     if ((operationId = checkAlreadyExported()) != null) {
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
     } else {
+      if (!settings.isTruncateAfterExport() && TableUtils.isCounterTable(table)) {
+        truncateTable();
+      }
       LOGGER.info("Exporting {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(true);
       String[] args = createExportArgs(operationId).toArray(new String[0]);
@@ -47,7 +50,7 @@ public class EmbeddedTableLiveMigrator extends TableLiveMigrator {
           "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
-        if (TableUtils.isCounterTable(table)) {
+        if (settings.isTruncateAfterExport() && TableUtils.isCounterTable(table)) {
           truncateTable();
         }
       }
