@@ -45,6 +45,9 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
           "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
+        if (TableUtils.isCounterTable(table)) {
+          truncateTable();
+        }
       }
       return new TableMigrationReport(this, status, operationId, true);
     }
@@ -59,9 +62,6 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
       throw new IllegalStateException(
           "Cannot import non-exported table: " + TableUtils.getFullyQualifiedTableName(table));
     } else {
-      if (TableUtils.isCounterTable(table)) {
-        truncateTable();
-      }
       LOGGER.info("Importing {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(false);
       ExitStatus status = invokeExternalDsbulk(createImportArgs(operationId));

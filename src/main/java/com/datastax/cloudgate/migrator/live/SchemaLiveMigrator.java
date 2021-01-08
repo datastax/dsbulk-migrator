@@ -69,6 +69,7 @@ public class SchemaLiveMigrator {
 
   public void migrate() {
     try {
+      checkTruncateOk();
       if (hasRegularTables) {
         LOGGER.info("Migrating regular tables...");
         migrateTables(migrator -> !TableUtils.isCounterTable(migrator.getTable()));
@@ -77,9 +78,6 @@ public class SchemaLiveMigrator {
       importQueue.clear();
       if (hasCounterTables) {
         LOGGER.info("Migrating counter tables...");
-        if (settings.isCheckTruncateOk()) {
-          checkTruncateOk();
-        }
         migrateTables(migrator -> TableUtils.isCounterTable(migrator.getTable()));
       }
     } catch (Exception e) {
@@ -107,7 +105,8 @@ public class SchemaLiveMigrator {
   }
 
   private void migrateTables(Predicate<TableLiveMigrator> filter) {
-    List<TableLiveMigrator> filtered = migrators.stream().filter(filter).collect(Collectors.toList());
+    List<TableLiveMigrator> filtered =
+        migrators.stream().filter(filter).collect(Collectors.toList());
     exportQueue.addAll(filtered);
     List<CompletableFuture<?>> futures = new ArrayList<>();
     for (int i = 0; i < settings.getMaxConcurrentOps(); i++) {
@@ -175,38 +174,41 @@ public class SchemaLiveMigrator {
   }
 
   private void checkTruncateOk() {
-    List<TableLiveMigrator> toImport =
-        migrators.stream()
-            .filter(migrator -> TableUtils.isCounterTable(migrator.getTable()))
-            .filter(migrator -> !migrator.isAlreadyImported())
-            .collect(Collectors.toList());
-    if (!toImport.isEmpty()) {
-      // Bypass the logging system and hit System.err directly
-      System.err.println("WARNING!");
-      System.err.println("Counter tables must be truncated before importing data.");
-      System.err.println(
-          "If you agree to proceed, the following tables WILL BE TRUNCATED on the TARGET cluster:");
-      toImport.forEach(
-          migrator ->
-              System.err.printf(
-                  "- %s%n", TableUtils.getFullyQualifiedTableName(migrator.getTable())));
-      System.err.println(
-          "Note that the above tables will NOT be truncated on the origin cluster.");
-      while (true) {
-        System.err.printf("Are you OK proceeding with the migration? (y/N)%n");
-        Scanner scanner = new Scanner(System.in);
-        String input = scanner.nextLine();
-        if (input.equalsIgnoreCase("y")) {
-          return;
-        } else if (input.isBlank() || input.equalsIgnoreCase("n")) {
+    if (hasCounterTables && settings.isCheckTruncateOk()) {
+      List<TableLiveMigrator> remainingCounterTables =
           migrators.stream()
               .filter(migrator -> TableUtils.isCounterTable(migrator.getTable()))
-              .forEach(
-                  migrator ->
-                      failed.add(
-                          new TableMigrationReport(
-                              migrator, ExitStatus.STATUS_ABORTED_FATAL_ERROR, null, false)));
-          throw new CancellationException("Truncate permission denied by user");
+              .filter(migrator -> !migrator.isAlreadyImported())
+              .collect(Collectors.toList());
+      if (!remainingCounterTables.isEmpty()) {
+        // Bypass the logging system and hit System.err directly
+        System.err.println("WARNING!");
+        System.err.println(
+            "After they are exported, counter tables must be truncated on the target cluster.");
+        System.err.println(
+            "If you agree to proceed, the following tables WILL BE TRUNCATED on the TARGET cluster:");
+        remainingCounterTables.forEach(
+            migrator ->
+                System.err.printf(
+                    "- %s%n", TableUtils.getFullyQualifiedTableName(migrator.getTable())));
+        System.err.println(
+            "Note that the above tables will NOT be truncated on the origin cluster.");
+        while (true) {
+          System.err.println("Are you OK proceeding with the migration? (y/N)");
+          Scanner scanner = new Scanner(System.in);
+          String input = scanner.nextLine();
+          if (input.equalsIgnoreCase("y")) {
+            return;
+          } else if (input.isBlank() || input.equalsIgnoreCase("n")) {
+            migrators.stream()
+                .filter(migrator -> TableUtils.isCounterTable(migrator.getTable()))
+                .forEach(
+                    migrator ->
+                        failed.add(
+                            new TableMigrationReport(
+                                migrator, ExitStatus.STATUS_ABORTED_FATAL_ERROR, null, false)));
+            throw new CancellationException("Truncate permission denied by user");
+          }
         }
       }
     }
