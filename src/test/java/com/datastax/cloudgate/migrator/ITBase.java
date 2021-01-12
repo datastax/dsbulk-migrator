@@ -17,8 +17,8 @@ package com.datastax.cloudgate.migrator;
 
 import static com.datastax.oss.dsbulk.workflow.api.utils.PlatformUtils.isWindows;
 
-import com.datastax.cloudgate.migrator.settings.ExportSettings;
-import com.datastax.cloudgate.migrator.settings.ImportSettings;
+import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportClusterInfo;
+import com.datastax.cloudgate.migrator.settings.ImportSettings.ImportClusterInfo;
 import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.cloudgate.migrator.utils.LoggingUtils;
 import com.datastax.oss.driver.api.core.type.DataTypes;
@@ -199,8 +199,8 @@ abstract class ITBase {
   MigrationSettings createSettings(boolean embedded) {
     MigrationSettings settings = new MigrationSettings();
     settings.generalSettings.dataDir = dataDir;
-    settings.exportSettings.clusterInfo = new ExportSettings.ClusterInfo();
-    settings.importSettings.clusterInfo = new ImportSettings.ClusterInfo();
+    settings.exportSettings.clusterInfo = new ExportClusterInfo();
+    settings.importSettings.clusterInfo = new ImportClusterInfo();
     settings.exportSettings.clusterInfo.hostAndPort = HostAndPort.fromString(originHost);
     settings.importSettings.clusterInfo.hostAndPort = HostAndPort.fromString(targetHost);
     settings.dsBulkSettings.dsbulkEmbedded = embedded;

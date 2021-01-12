@@ -18,11 +18,9 @@ package com.datastax.cloudgate.migrator.live;
 import com.datastax.cloudgate.migrator.processor.ExportedColumn;
 import com.datastax.cloudgate.migrator.processor.TableProcessor;
 import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.SessionUtils;
 import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.CqlSessionBuilder;
-import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
-import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -248,23 +246,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
   protected void truncateTable() {
     String tableName = TableUtils.getFullyQualifiedTableName(table);
     LOGGER.info("Truncating {} on target cluster...", tableName);
-    DriverConfigLoader loader =
-        DriverConfigLoader.programmaticBuilder()
-            .withString(
-                DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, "DcInferringLoadBalancingPolicy")
-            .build();
-    CqlSessionBuilder builder = CqlSession.builder().withConfigLoader(loader);
-    if (settings.importSettings.clusterInfo.bundle != null) {
-      builder.withCloudSecureConnectBundle(settings.importSettings.clusterInfo.bundle);
-    } else {
-      builder.addContactPoint(settings.importSettings.clusterInfo.getHostAddress());
-    }
-    if (settings.importSettings.credentials != null) {
-      builder.withAuthCredentials(
-          settings.importSettings.credentials.username,
-          String.valueOf(settings.importSettings.credentials.password));
-    }
-    try (CqlSession session = builder.build()) {
+    try (CqlSession session = SessionUtils.createImportSession(settings.importSettings)) {
       session.execute("TRUNCATE " + tableName);
       LOGGER.info("Successfully truncated {} on target cluster", tableName);
     }

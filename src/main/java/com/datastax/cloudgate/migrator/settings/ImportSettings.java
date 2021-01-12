@@ -27,9 +27,9 @@ import picocli.CommandLine.Option;
 public class ImportSettings {
 
   @ArgGroup(multiplicity = "1")
-  public ClusterInfo clusterInfo;
+  public ImportClusterInfo clusterInfo;
 
-  public static class ClusterInfo {
+  public static class ImportClusterInfo implements ClusterInfo {
 
     @Option(
         names = "--import-host",
@@ -52,16 +52,25 @@ public class ImportSettings {
         required = true)
     public Path bundle;
 
+    @Override
     public InetSocketAddress getHostAddress() {
+      if (hostAndPort == null) {
+        return null;
+      }
       return InetSocketAddress.createUnresolved(
           hostAndPort.getHost(), hostAndPort.hasPort() ? hostAndPort.getPort() : 9042);
+    }
+
+    @Override
+    public Path getBundle() {
+      return bundle;
     }
   }
 
   @ArgGroup(exclusive = false)
-  public Credentials credentials;
+  public ImportCredentials credentials;
 
-  public static class Credentials {
+  public static class ImportCredentials implements Credentials {
 
     @Option(
         names = "--import-username",
@@ -83,6 +92,16 @@ public class ImportSettings {
         prompt = "Enter the password to use to authenticate against the target cluster: ",
         interactive = true)
     public char[] password;
+
+    @Override
+    public String getUsername() {
+      return username;
+    }
+
+    @Override
+    public char[] getPassword() {
+      return password;
+    }
   }
 
   @Option(

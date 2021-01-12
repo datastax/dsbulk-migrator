@@ -25,9 +25,9 @@ import picocli.CommandLine.Option;
 public class ExportSettings {
 
   @ArgGroup(multiplicity = "1")
-  public ClusterInfo clusterInfo;
+  public ExportClusterInfo clusterInfo;
 
-  public static class ClusterInfo {
+  public static class ExportClusterInfo implements ClusterInfo {
 
     @Option(
         names = "--export-host",
@@ -50,16 +50,25 @@ public class ExportSettings {
         required = true)
     public Path bundle;
 
+    @Override
     public InetSocketAddress getHostAddress() {
+      if (hostAndPort == null) {
+        return null;
+      }
       return InetSocketAddress.createUnresolved(
           hostAndPort.getHost(), hostAndPort.hasPort() ? hostAndPort.getPort() : 9042);
+    }
+
+    @Override
+    public Path getBundle() {
+      return bundle;
     }
   }
 
   @ArgGroup(exclusive = false)
-  public Credentials credentials;
+  public ExportCredentials credentials;
 
-  public static class Credentials {
+  public static class ExportCredentials implements Credentials {
 
     @Option(
         names = "--export-username",
@@ -81,6 +90,16 @@ public class ExportSettings {
         prompt = "Enter the password to use to authenticate against the origin cluster: ",
         interactive = true)
     public char[] password;
+
+    @Override
+    public String getUsername() {
+      return username;
+    }
+
+    @Override
+    public char[] getPassword() {
+      return password;
+    }
   }
 
   @Option(

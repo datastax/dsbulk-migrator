@@ -16,7 +16,9 @@
 package com.datastax.cloudgate.migrator.live;
 
 import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.SessionUtils;
 import com.datastax.cloudgate.migrator.utils.TableUtils;
+import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.shaded.guava.common.util.concurrent.MoreExecutors;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +71,8 @@ public class SchemaLiveMigrator {
 
   public ExitStatus migrate() {
     try {
+      // Origin cluster connectivity has already been tested by TableProcessorFactory
+      testTargetClusterConnectivity();
       askPermissionToTruncate();
       if (hasRegularTables) {
         LOGGER.info("Migrating regular tables...");
@@ -109,6 +113,11 @@ public class SchemaLiveMigrator {
       return ExitStatus.STATUS_ABORTED_TOO_MANY_ERRORS;
     }
     return ExitStatus.STATUS_COMPLETED_WITH_ERRORS;
+  }
+
+  @SuppressWarnings("EmptyTryBlock")
+  private void testTargetClusterConnectivity() {
+    try (CqlSession ignored = SessionUtils.createImportSession(settings.importSettings)) {}
   }
 
   private void migrateTables(Predicate<TableLiveMigrator> filter) {

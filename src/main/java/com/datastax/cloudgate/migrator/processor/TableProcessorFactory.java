@@ -17,12 +17,10 @@ package com.datastax.cloudgate.migrator.processor;
 
 import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.cloudgate.migrator.settings.TableType;
+import com.datastax.cloudgate.migrator.utils.SessionUtils;
 import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.CqlSessionBuilder;
-import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
-import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
 import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
@@ -45,29 +43,9 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
   public static final Logger LOGGER = LoggerFactory.getLogger(TableProcessorFactory.class);
 
   public List<T> create(MigrationSettings settings) {
-    DriverConfigLoader loader =
-        DriverConfigLoader.programmaticBuilder()
-            .withString(
-                DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, "DcInferringLoadBalancingPolicy")
-            .build();
-    CqlSessionBuilder builder = CqlSession.builder().withConfigLoader(loader);
-    if (settings.exportSettings.clusterInfo.bundle != null) {
-      builder.withCloudSecureConnectBundle(settings.exportSettings.clusterInfo.bundle);
-    } else {
-      builder.addContactPoint(settings.exportSettings.clusterInfo.getHostAddress());
-    }
-    if (settings.exportSettings.credentials != null) {
-      builder.withAuthCredentials(
-          settings.exportSettings.credentials.username,
-          String.valueOf(settings.exportSettings.credentials.password));
-    }
-    builder.withNodeFilter(
-        node ->
-            node.getEndPoint()
-                .resolve()
-                .equals(settings.exportSettings.clusterInfo.getHostAddress()));
+
     List<T> processors = new ArrayList<>();
-    try (CqlSession session = builder.build()) {
+    try (CqlSession session = SessionUtils.createExportSession(settings.exportSettings)) {
       Pattern exportKeyspaces = settings.generalSettings.keyspaces;
       List<CqlIdentifier> keyspaceNames =
           session.getMetadata().getKeyspaces().values().stream()
@@ -102,6 +80,9 @@ public abstract class TableProcessorFactory<T extends TableProcessor> {
           }
         }
       }
+    }
+    if (processors.size() == 0) {
+      throw new IllegalStateException("No tables to migrate");
     }
     LOGGER.info("Migrating {} tables in total", processors.size());
     return processors;
