@@ -148,6 +148,7 @@
         <configuration>
           <excludes>
             <exclude>.idea/**</exclude>
+            <exclude>idea/**</exclude>
             <exclude>**/target/**</exclude>
             <exclude>**/dependency-reduced-pom.xml</exclude>
             <exclude>**/.flattened-pom.xml</exclude>
