@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,18 +100,25 @@ public class SchemaScriptGenerator {
   private void printExportScriptHeader(PrintWriter writer) {
     writer.println("#!/bin/bash");
     writer.println();
-    writer.println(
-        "bundle=\"${MIGRATOR_EXPORT_BUNDLE:-"
-            + (settings.exportSettings.clusterInfo.bundle != null
-                ? settings.exportSettings.clusterInfo.bundle
-                : "")
-            + "}\"");
-    writer.println(
-        "host=\"${MIGRATOR_EXPORT_HOST:-"
-            + (settings.exportSettings.clusterInfo.hostAndPort != null
-                ? settings.exportSettings.clusterInfo.hostAndPort
-                : "")
-            + "}\"");
+    if (settings.exportSettings.clusterInfo.isAstra()) {
+      writer.println(
+          "bundle=\"${MIGRATOR_EXPORT_BUNDLE:-"
+              + (settings.exportSettings.clusterInfo.bundle != null
+                  ? settings.exportSettings.clusterInfo.bundle
+                  : "")
+              + "}\"");
+    } else {
+      String hosts = "";
+      if (settings.exportSettings.clusterInfo.hostsAndPorts != null) {
+        hosts =
+            "["
+                + settings.exportSettings.clusterInfo.hostsAndPorts.stream()
+                    .map(hp -> "\\\"" + hp + "\\\"")
+                    .collect(Collectors.joining(","))
+                + "]";
+      }
+      writer.println("hosts=\"${MIGRATOR_EXPORT_HOSTS:-" + hosts + "}\"");
+    }
     writer.println(
         "username=\"${MIGRATOR_EXPORT_USERNAME:-"
             + (settings.exportSettings.credentials != null
@@ -153,18 +161,25 @@ public class SchemaScriptGenerator {
   private void printImportScriptHeader(PrintWriter writer, boolean counter) {
     writer.println("#!/bin/bash");
     writer.println();
-    writer.println(
-        "bundle=\"${MIGRATOR_IMPORT_BUNDLE:-"
-            + (settings.importSettings.clusterInfo.bundle != null
-                ? settings.importSettings.clusterInfo.bundle
-                : "")
-            + "}\"");
-    writer.println(
-        "host=\"${MIGRATOR_IMPORT_HOST:-"
-            + (settings.importSettings.clusterInfo.hostAndPort != null
-                ? settings.importSettings.clusterInfo.hostAndPort
-                : "")
-            + "}\"");
+    if (settings.importSettings.clusterInfo.isAstra()) {
+      writer.println(
+          "bundle=\"${MIGRATOR_IMPORT_BUNDLE:-"
+              + (settings.importSettings.clusterInfo.bundle != null
+                  ? settings.importSettings.clusterInfo.bundle
+                  : "")
+              + "}\"");
+    } else {
+      String hosts = "";
+      if (settings.importSettings.clusterInfo.hostsAndPorts != null) {
+        hosts =
+            "["
+                + settings.importSettings.clusterInfo.hostsAndPorts.stream()
+                    .map(hp -> "\\\"" + hp + "\\\"")
+                    .collect(Collectors.joining(","))
+                + "]";
+      }
+      writer.println("hosts=\"${MIGRATOR_IMPORT_HOSTS:-" + hosts + "}\"");
+    }
     writer.println(
         "username=\"${MIGRATOR_IMPORT_USERNAME:-"
             + (settings.importSettings.credentials != null

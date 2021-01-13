@@ -34,6 +34,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -220,7 +221,11 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add(String.valueOf(settings.exportSettings.clusterInfo.bundle));
     } else {
       args.add("-h");
-      args.add("[\"" + settings.exportSettings.clusterInfo.hostAndPort + "\"]");
+      String hosts =
+          settings.exportSettings.clusterInfo.hostsAndPorts.stream()
+              .map(hp -> "\"" + hp + "\"")
+              .collect(Collectors.joining(","));
+      args.add("[" + hosts + "]");
     }
     if (settings.exportSettings.credentials != null) {
       args.add("-u");
@@ -264,7 +269,11 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add(String.valueOf(settings.importSettings.clusterInfo.bundle));
     } else {
       args.add("-h");
-      args.add("[\"" + settings.importSettings.clusterInfo.hostAndPort + "\"]");
+      String hosts =
+          settings.importSettings.clusterInfo.hostsAndPorts.stream()
+              .map(hp -> "\"" + hp + "\"")
+              .collect(Collectors.joining(","));
+      args.add("[" + hosts + "]");
     }
     if (settings.importSettings.credentials != null) {
       args.add("-u");

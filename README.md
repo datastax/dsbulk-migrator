@@ -94,8 +94,8 @@ default value:
       --export-host=HOST[:PORT]
                              The host name or IP and, optionally, the port of a node from the
                                origin cluster. If the port is not specified, it will default to
-                               9042. Options --export-host and --export-bundle are mutually
-                               exclusive.
+                               9042. This option can be specified multiple times. Options
+                               --export-host and --export-bundle are mutually exclusive.
       --export-max-concurrent-files=NUM|AUTO
                              The maximum number of concurrent files to write to. Must be a positive
                                number or the special value AUTO. The default is AUTO.
@@ -136,8 +136,8 @@ default value:
       --import-host=HOST[:PORT]
                              The host name or IP and, optionally, the port of a node from the
                                target cluster. If the port is not specified, it will default to
-                               9042. Options --export-host and --export-bundle are mutually
-                               exclusive.
+                               9042. This option can be specified multiple times. Options
+                               --export-host and --export-bundle are mutually exclusive.
       --import-max-concurrent-files=NUM|AUTO
                              The maximum number of concurrent files to read from. Must be a
                                positive number or the special value AUTO. The default is AUTO.

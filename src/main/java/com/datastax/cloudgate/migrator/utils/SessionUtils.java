@@ -24,6 +24,8 @@ import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,10 +69,14 @@ public class SessionUtils {
     if (clusterInfo.isAstra()) {
       builder.withCloudSecureConnectBundle(clusterInfo.getBundle());
     } else {
-      InetSocketAddress contactPoint = clusterInfo.getHostAddress();
-      builder.addContactPoint(contactPoint);
-      // limit connectivity to just the contact host to limit network I/O
-      builder.withNodeFilter(node -> node.getEndPoint().resolve().equals(contactPoint));
+      List<InetSocketAddress> contactPoints = clusterInfo.getContactPoints();
+      builder.addContactPoints(contactPoints);
+      // limit connectivity to just the contact points to limit network I/O
+      builder.withNodeFilter(
+          node -> {
+            SocketAddress address = node.getEndPoint().resolve();
+            return address instanceof InetSocketAddress && contactPoints.contains(address);
+          });
     }
     if (credentials != null) {
       builder.withAuthCredentials(

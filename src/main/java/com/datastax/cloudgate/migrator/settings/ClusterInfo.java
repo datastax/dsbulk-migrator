@@ -17,10 +17,11 @@ package com.datastax.cloudgate.migrator.settings;
 
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.util.List;
 
 public interface ClusterInfo {
 
-  InetSocketAddress getHostAddress();
+  List<InetSocketAddress> getContactPoints();
 
   Path getBundle();
 

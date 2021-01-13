@@ -201,8 +201,10 @@ abstract class ITBase {
     settings.generalSettings.dataDir = dataDir;
     settings.exportSettings.clusterInfo = new ExportClusterInfo();
     settings.importSettings.clusterInfo = new ImportClusterInfo();
-    settings.exportSettings.clusterInfo.hostAndPort = HostAndPort.fromString(originHost);
-    settings.importSettings.clusterInfo.hostAndPort = HostAndPort.fromString(targetHost);
+    settings.exportSettings.clusterInfo.hostsAndPorts =
+        Collections.singletonList(HostAndPort.fromString(originHost));
+    settings.importSettings.clusterInfo.hostsAndPorts =
+        Collections.singletonList(HostAndPort.fromString(targetHost));
     settings.dsBulkSettings.dsbulkEmbedded = embedded;
     settings.dsBulkSettings.dsbulkLogDir = logsDir;
     if (!embedded) {

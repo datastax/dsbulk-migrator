@@ -75,8 +75,11 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("  mkdir -p " + tableDataDir);
     writer.println("  operation_id=" + getOperationIdTemplate(true));
     writer.println("  \"${dsbulk_cmd}\" unload \\");
-    writer.println("    $([[ -z \"$host\" ]] || echo \"-h \\\"${host}\\\"\") \\");
-    writer.println("    $([[ -z \"$bundle\" ]] || echo \"-b \\\"${bundle}\\\"\") \\");
+    if (settings.exportSettings.clusterInfo.isAstra()) {
+      writer.println("    -b \"${bundle}\" \\");
+    } else {
+      writer.println("    -h \"${hosts}\" \\");
+    }
     writer.println("    $([[ -z \"$username\" ]] || echo \"-u \\\"${username}\\\"\") \\");
     writer.println("    $([[ -z \"$password\" ]] || echo \"-p \\\"${password}\\\"\") \\");
     writer.println("    -url " + tableDataDir + " \\");
@@ -143,8 +146,11 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("elif ls -1qA " + tableDataDir + "/output*.csv 2> /dev/null | grep -q . ; then");
     writer.println("  operation_id=" + getOperationIdTemplate(false));
     writer.println("  \"${dsbulk_cmd}\" load \\");
-    writer.println("    $([[ -z \"$host\" ]] || echo \"-h \\\"${host}\\\"\") \\");
-    writer.println("    $([[ -z \"$bundle\" ]] || echo \"-b \\\"${bundle}\\\"\") \\");
+    if (settings.importSettings.clusterInfo.isAstra()) {
+      writer.println("    -b \"${bundle}\" \\");
+    } else {
+      writer.println("    -h \"${hosts}\" \\");
+    }
     writer.println("    $([[ -z \"$username\" ]] || echo \"-u \\\"${username}\\\"\") \\");
     writer.println("    $([[ -z \"$password\" ]] || echo \"-p \\\"${password}\\\"\") \\");
     writer.println("    -url " + tableDataDir + " \\");

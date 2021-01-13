@@ -22,7 +22,9 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
@@ -39,10 +41,11 @@ public class ImportSettings {
         description =
             "The host name or IP and, optionally, the port of a node from the target cluster. "
                 + "If the port is not specified, it will default to 9042. "
+                + "This option can be specified multiple times. "
                 + "Options --export-host and --export-bundle are mutually exclusive.",
         converter = HostAndPortConverter.class,
         required = true)
-    public HostAndPort hostAndPort;
+    public List<HostAndPort> hostsAndPorts;
 
     @Option(
         names = "--import-bundle",
@@ -55,12 +58,16 @@ public class ImportSettings {
     public Path bundle;
 
     @Override
-    public InetSocketAddress getHostAddress() {
-      if (hostAndPort == null) {
-        return null;
+    public List<InetSocketAddress> getContactPoints() {
+      if (hostsAndPorts == null || hostsAndPorts.isEmpty()) {
+        return Collections.emptyList();
       }
-      return InetSocketAddress.createUnresolved(
-          hostAndPort.getHost(), hostAndPort.hasPort() ? hostAndPort.getPort() : 9042);
+      return hostsAndPorts.stream()
+          .map(
+              hp ->
+                  InetSocketAddress.createUnresolved(
+                      hp.getHost(), hp.hasPort() ? hp.getPort() : 9042))
+          .collect(Collectors.toList());
     }
 
     @Override
