@@ -106,7 +106,9 @@ default value:
                                the password interactively.
       --export-splits=NUM|NC The maximum number of token range queries to generate. Use the NC
                                syntax to specify a multiple of the number of available cores, e.g.
-                               8C = 8 times the number of available cores. The default is 8C.
+                               8C = 8 times the number of available cores. The default is 8C. This
+                               is an advanced setting; you should rarely need to modify the default
+                               value.
       --export-username=STRING
                              The username to use to authenticate against the origin cluster.
                                Options --export-username and --export-password must be provided
