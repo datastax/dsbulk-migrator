@@ -1,11 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="SchemaMigrator (embedded)" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator"/>
-    <module name="cloud-gate-schema-migrator"/>
-    <option name="PROGRAM_PARAMETERS" value="migrate-live --data-dir=target/export --keyspaces=(keyspace1|keyspace2) --tables=(table_.*|MyTable_\d+) --table-types=all --export-host=127.0.0.1:9042 --export-username=cassandra --export-password=cassandra --import-host=127.0.1.1:9042 --import-username=cassandra --import-password --dsbulk-use-embedded"/>
+    <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator" />
+    <module name="cloud-gate-schema-migrator" />
+    <option name="PROGRAM_PARAMETERS" value="migrate-live --data-dir=target/export --table-types=all --export-host=127.0.0.1:9042 --export-username=cassandra --export-password=cassandra --import-host=127.0.1.1:9042 --import-username=cassandra --import-password --dsbulk-use-embedded" />
     <method v="2">
-      <option name="Make" enabled="true"/>
+      <option name="Make" enabled="true" />
     </method>
   </configuration>
 </component>
