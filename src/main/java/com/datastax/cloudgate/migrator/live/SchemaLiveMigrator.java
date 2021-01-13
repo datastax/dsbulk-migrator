@@ -194,7 +194,7 @@ public class SchemaLiveMigrator {
       List<TableLiveMigrator> remainingCounterTables =
           migrators.stream()
               .filter(migrator -> TableUtils.isCounterTable(migrator.getTable()))
-              .filter(migrator -> !migrator.isAlreadyImported())
+              .filter(migrator -> !migrator.isImported())
               .collect(Collectors.toList());
       if (!remainingCounterTables.isEmpty()) {
         // Bypass the logging system and hit System.err directly

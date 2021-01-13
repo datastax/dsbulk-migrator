@@ -40,7 +40,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TableLiveMigrator.class);
 
-  protected final Path dataDir;
+  protected final Path tableDataDir;
 
   protected final Path exportAckDir;
   protected final Path exportAckFile;
@@ -51,7 +51,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
   public TableLiveMigrator(
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
     super(table, settings, exportedColumns);
-    this.dataDir =
+    this.tableDataDir =
         settings
             .generalSettings
             .dataDir
@@ -67,11 +67,72 @@ public abstract class TableLiveMigrator extends TableProcessor {
             table.getKeyspace().asInternal() + "__" + table.getName().asInternal() + ".imported");
   }
 
-  public abstract TableMigrationReport exportTable();
+  public TableMigrationReport exportTable() {
+    String operationId;
+    if ((operationId = retrieveExportOperationId()) != null) {
+      LOGGER.warn(
+          "Table {}.{}: already exported, skipping (delete this file to re-export: {}).",
+          table.getKeyspace(),
+          table.getName(),
+          exportAckFile);
+      return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
+    } else {
+      if (settings.generalSettings.truncateBeforeExport && TableUtils.isCounterTable(table)) {
+        truncateTable();
+      }
+      LOGGER.info("Exporting {}...", TableUtils.getFullyQualifiedTableName(table));
+      operationId = createOperationId(true);
+      List<String> args = createExportArgs(operationId);
+      ExitStatus status = invokeDsbulk(args);
+      LOGGER.info(
+          "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
+      if (status == ExitStatus.STATUS_OK) {
+        createExportAckFile(operationId);
+        if (!settings.generalSettings.truncateBeforeExport && TableUtils.isCounterTable(table)) {
+          truncateTable();
+        }
+      }
+      return new TableMigrationReport(this, status, operationId, true);
+    }
+  }
 
-  public abstract TableMigrationReport importTable();
+  public TableMigrationReport importTable() {
+    String operationId;
+    if ((operationId = retrieveImportOperationId()) != null) {
+      LOGGER.warn(
+          "Table {}.{}: already imported, skipping (delete this file to re-import: {}).",
+          table.getKeyspace(),
+          table.getName(),
+          importAckFile);
+      return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, false);
+    } else if (!isExported()) {
+      throw new IllegalStateException(
+          "Cannot import non-exported table: " + TableUtils.getFullyQualifiedTableName(table));
+    } else {
+      LOGGER.info("Importing {}...", TableUtils.getFullyQualifiedTableName(table));
+      operationId = createOperationId(false);
+      List<String> args = createImportArgs(operationId);
+      ExitStatus status = invokeDsbulk(args);
+      LOGGER.info(
+          "Import of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
+      if (status == ExitStatus.STATUS_OK) {
+        createImportAckFile(operationId);
+      }
+      return new TableMigrationReport(this, status, operationId, false);
+    }
+  }
 
-  protected String createOperationId(boolean export) {
+  public boolean isExported() {
+    return Files.exists(exportAckFile);
+  }
+
+  public boolean isImported() {
+    return Files.exists(importAckFile);
+  }
+
+  protected abstract ExitStatus invokeDsbulk(List<String> args);
+
+  private String createOperationId(boolean export) {
     ZonedDateTime now = Instant.now().atZone(ZoneOffset.UTC);
     String timestamp = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS").format(now);
     return String.format(
@@ -82,24 +143,11 @@ public abstract class TableLiveMigrator extends TableProcessor {
         timestamp);
   }
 
-  public boolean isAlreadyExported() {
-    return Files.exists(exportAckFile);
-  }
-
-  public boolean isAlreadyImported() {
-    return Files.exists(importAckFile);
-  }
-
-  protected String checkAlreadyExported() {
-    if (isAlreadyExported()) {
+  private String retrieveExportOperationId() {
+    if (isExported()) {
       try {
         String operationId = Files.readString(exportAckFile);
         if (operationId != null && !operationId.isBlank()) {
-          LOGGER.warn(
-              "Table {}.{}: already exported, skipping (delete this file to re-export: {}).",
-              table.getKeyspace(),
-              table.getName(),
-              exportAckFile);
           return operationId;
         }
       } catch (IOException ignored) {
@@ -108,16 +156,11 @@ public abstract class TableLiveMigrator extends TableProcessor {
     return null;
   }
 
-  protected String checkAlreadyImported() {
-    if (isAlreadyImported()) {
+  private String retrieveImportOperationId() {
+    if (isImported()) {
       try {
         String operationId = Files.readString(importAckFile);
         if (operationId != null && !operationId.isBlank()) {
-          LOGGER.warn(
-              "Table {}.{}: already imported, skipping (delete this file to re-import: {}).",
-              table.getKeyspace(),
-              table.getName(),
-              importAckFile);
           return operationId;
         }
       } catch (IOException ignored) {
@@ -126,7 +169,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     return null;
   }
 
-  protected void createExportAckFile(String operationId) {
+  private void createExportAckFile(String operationId) {
     try {
       Files.createDirectories(exportAckDir);
       Files.createFile(exportAckFile);
@@ -136,7 +179,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     }
   }
 
-  protected void createImportAckFile(String operationId) {
+  private void createImportAckFile(String operationId) {
     try {
       Files.createDirectories(importAckDir);
       Files.createFile(importAckFile);
@@ -146,7 +189,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     }
   }
 
-  protected List<String> createExportArgs(String operationId) {
+  private List<String> createExportArgs(String operationId) {
     List<String> args = new ArrayList<>();
     args.add("unload");
     if (settings.exportSettings.clusterInfo.bundle != null) {
@@ -163,7 +206,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add(String.valueOf(settings.exportSettings.credentials.password));
     }
     args.add("-url");
-    args.add(String.valueOf(dataDir));
+    args.add(String.valueOf(tableDataDir));
     args.add("-maxRecords");
     args.add(String.valueOf(settings.exportSettings.maxRecords));
     args.add("-maxConcurrentFiles");
@@ -189,7 +232,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     return args;
   }
 
-  protected List<String> createImportArgs(String operationId) {
+  private List<String> createImportArgs(String operationId) {
     List<String> args = new ArrayList<>();
     args.add("load");
     if (settings.importSettings.clusterInfo.bundle != null) {
@@ -206,7 +249,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add(String.valueOf(settings.importSettings.credentials.password));
     }
     args.add("-url");
-    args.add(String.valueOf(dataDir));
+    args.add(String.valueOf(tableDataDir));
     args.add("-maxConcurrentFiles");
     args.add(settings.importSettings.maxConcurrentFiles);
     args.add("-maxConcurrentQueries");
@@ -243,7 +286,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     return args;
   }
 
-  protected void truncateTable() {
+  private void truncateTable() {
     String tableName = TableUtils.getFullyQualifiedTableName(table);
     LOGGER.info("Truncating {} on target cluster...", tableName);
     try (CqlSession session = SessionUtils.createImportSession(settings.importSettings)) {
@@ -252,10 +295,12 @@ public abstract class TableLiveMigrator extends TableProcessor {
     }
   }
 
+  @Override
   protected String escape(String text) {
     return text.replace("\"", "\\\"");
   }
 
+  @Override
   protected String getImportDefaultTimestamp() {
     return String.valueOf(settings.importSettings.getDefaultTimestampMicros());
   }

@@ -33,48 +33,7 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
   }
 
   @Override
-  public TableMigrationReport exportTable() {
-    String operationId;
-    if ((operationId = checkAlreadyExported()) != null) {
-      return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
-    } else {
-      LOGGER.info("Exporting {}...", TableUtils.getFullyQualifiedTableName(table));
-      operationId = createOperationId(true);
-      ExitStatus status = invokeExternalDsbulk(createExportArgs(operationId));
-      LOGGER.info(
-          "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
-      if (status == ExitStatus.STATUS_OK) {
-        createExportAckFile(operationId);
-        if (TableUtils.isCounterTable(table)) {
-          truncateTable();
-        }
-      }
-      return new TableMigrationReport(this, status, operationId, true);
-    }
-  }
-
-  @Override
-  public TableMigrationReport importTable() {
-    String operationId;
-    if ((operationId = checkAlreadyImported()) != null) {
-      return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, false);
-    } else if (!isAlreadyExported()) {
-      throw new IllegalStateException(
-          "Cannot import non-exported table: " + TableUtils.getFullyQualifiedTableName(table));
-    } else {
-      LOGGER.info("Importing {}...", TableUtils.getFullyQualifiedTableName(table));
-      operationId = createOperationId(false);
-      ExitStatus status = invokeExternalDsbulk(createImportArgs(operationId));
-      LOGGER.info(
-          "Import of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
-      if (status == ExitStatus.STATUS_OK) {
-        createImportAckFile(operationId);
-      }
-      return new TableMigrationReport(this, status, operationId, false);
-    }
-  }
-
-  private ExitStatus invokeExternalDsbulk(List<String> args) {
+  protected ExitStatus invokeDsbulk(List<String> args) {
     try {
       ProcessBuilder builder = new ProcessBuilder();
       args.add(0, String.valueOf(settings.dsBulkSettings.dsbulkCmd));
