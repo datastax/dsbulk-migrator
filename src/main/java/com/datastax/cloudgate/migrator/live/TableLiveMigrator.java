@@ -25,6 +25,7 @@ import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -108,6 +109,14 @@ public abstract class TableLiveMigrator extends TableProcessor {
     } else if (!isExported()) {
       throw new IllegalStateException(
           "Cannot import non-exported table: " + TableUtils.getFullyQualifiedTableName(table));
+    } else if (!hasExportedData()) {
+      LOGGER.warn(
+          "Table {}.{}: export did not create any CSV file, skipping import. Is the table empty?",
+          table.getKeyspace(),
+          table.getName());
+      operationId = createOperationId(false);
+      createImportAckFile(operationId);
+      return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, false);
     } else {
       LOGGER.info("Importing {}...", TableUtils.getFullyQualifiedTableName(table));
       operationId = createOperationId(false);
@@ -187,6 +196,20 @@ public abstract class TableLiveMigrator extends TableProcessor {
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  private boolean hasExportedData() {
+    if (isExported()) {
+      try (DirectoryStream<Path> stream = Files.newDirectoryStream(tableDataDir)) {
+        for (Path entry : stream) {
+          if (entry.startsWith("output") && entry.endsWith(".csv")) {
+            return true;
+          }
+        }
+      } catch (IOException ignored) {
+      }
+    }
+    return false;
   }
 
   private List<String> createExportArgs(String operationId) {

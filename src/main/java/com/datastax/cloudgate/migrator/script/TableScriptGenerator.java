@@ -26,16 +26,17 @@ import java.util.List;
 
 public class TableScriptGenerator extends TableProcessor {
 
-  private final String dataDir;
+  private final String tableDataDir;
   private final String exportAckDir;
   private final String importAckDir;
   private final String exportAckFile;
   private final String importAckFile;
+  private final String escapedFullyQualifiedTableName;
 
   public TableScriptGenerator(
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
     super(table, settings, exportedColumns);
-    dataDir =
+    tableDataDir =
         "\"${data_dir}/"
             + this.table.getKeyspace().asInternal()
             + "/"
@@ -55,6 +56,10 @@ public class TableScriptGenerator extends TableProcessor {
             + "__"
             + this.table.getName().asInternal()
             + ".imported\"";
+    escapedFullyQualifiedTableName =
+        this.table.getKeyspace().asCql(true).replace("\"", "\\\"")
+            + "."
+            + this.table.getName().asCql(true).replace("\"", "\\\"");
   }
 
   public void printExportScript(PrintWriter writer) {
@@ -62,21 +67,19 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("if [[ -f " + exportAckFile + " ]]; then");
     writer.println(
         "  echo \"Table "
-            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
-            + "."
-            + table.getName().asCql(true).replace("\"", "\\\"")
+            + escapedFullyQualifiedTableName
             + ": already exported, skipping (delete this file to re-export: \""
             + exportAckFile
             + "\").\"");
     writer.println("else");
-    writer.println("  mkdir -p " + dataDir);
+    writer.println("  mkdir -p " + tableDataDir);
     writer.println("  operation_id=" + getOperationIdTemplate(true));
     writer.println("  \"${dsbulk_cmd}\" unload \\");
     writer.println("    $([[ -z \"$host\" ]] || echo \"-h \\\"${host}\\\"\") \\");
     writer.println("    $([[ -z \"$bundle\" ]] || echo \"-b \\\"${bundle}\\\"\") \\");
     writer.println("    $([[ -z \"$username\" ]] || echo \"-u \\\"${username}\\\"\") \\");
     writer.println("    $([[ -z \"$password\" ]] || echo \"-p \\\"${password}\\\"\") \\");
-    writer.println("    -url " + dataDir + " \\");
+    writer.println("    -url " + tableDataDir + " \\");
     writer.println("    -maxRecords \"$max_records\" \\");
     writer.println("    -maxConcurrentFiles \"$max_concurrent_files\" \\");
     writer.println("    -maxConcurrentQueries \"$max_concurrent_queries\" \\");
@@ -97,12 +100,7 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println();
     writer.println("  exit_status=$?");
     writer.println("  if [ $exit_status -eq 0 ]; then");
-    writer.println(
-        "    echo \"Table "
-            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
-            + "."
-            + table.getName().asCql(true).replace("\"", "\\\"")
-            + ": export successful\"");
+    writer.println("    echo \"Table " + escapedFullyQualifiedTableName + ": export successful\"");
     writer.println("    mkdir -p " + exportAckDir);
     writer.println("    touch " + exportAckFile);
     writer.println("    echo \"$operation_id\" >> " + exportAckFile);
@@ -118,9 +116,7 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("  else");
     writer.println(
         "    echo \"Table "
-            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
-            + "."
-            + table.getName().asCql(true).replace("\"", "\\\"")
+            + escapedFullyQualifiedTableName
             + ": export failed (exit status: $exit_status)\"");
     writer.println("  fi");
     writer.println("fi");
@@ -133,20 +129,25 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("if [[ -f " + importAckFile + " ]]; then");
     writer.println(
         "  echo \"Table "
-            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
-            + "."
-            + table.getName().asCql(true).replace("\"", "\\\"")
+            + escapedFullyQualifiedTableName
             + ": already imported, skipping (delete this file to re-import: \""
             + importAckFile
             + "\").\"");
-    writer.println("else");
+    writer.println("elif [ ! -d " + tableDataDir + " ]; then");
+    writer.println(
+        "  echo \"Table "
+            + escapedFullyQualifiedTableName
+            + ": data directory "
+            + tableDataDir
+            + " does not exist, skipping. Was the table exported?\"");
+    writer.println("elif ls -1qA " + tableDataDir + "/output*.csv 2> /dev/null | grep -q . ; then");
     writer.println("  operation_id=" + getOperationIdTemplate(false));
     writer.println("  \"${dsbulk_cmd}\" load \\");
     writer.println("    $([[ -z \"$host\" ]] || echo \"-h \\\"${host}\\\"\") \\");
     writer.println("    $([[ -z \"$bundle\" ]] || echo \"-b \\\"${bundle}\\\"\") \\");
     writer.println("    $([[ -z \"$username\" ]] || echo \"-u \\\"${username}\\\"\") \\");
     writer.println("    $([[ -z \"$password\" ]] || echo \"-p \\\"${password}\\\"\") \\");
-    writer.println("    -url " + dataDir + " \\");
+    writer.println("    -url " + tableDataDir + " \\");
     writer.println("    -maxErrors \"$max_errors\" \\");
     writer.println("    -maxConcurrentFiles \"$max_concurrent_files\" \\");
     writer.println("    -maxConcurrentQueries \"$max_concurrent_queries\" \\");
@@ -175,12 +176,7 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println();
     writer.println("  exit_status=$?");
     writer.println("  if [ $exit_status -eq 0 ]; then");
-    writer.println(
-        "    echo \"Table "
-            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
-            + "."
-            + table.getName().asCql(true).replace("\"", "\\\"")
-            + ": import successful\"");
+    writer.println("    echo \"Table " + escapedFullyQualifiedTableName + ": import successful\"");
     writer.println("    mkdir -p " + importAckDir);
     writer.println("    touch " + importAckFile);
     writer.println("    echo \"$operation_id\" >> " + importAckFile);
@@ -196,11 +192,14 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("  else");
     writer.println(
         "    echo \"Table "
-            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
-            + "."
-            + table.getName().asCql(true).replace("\"", "\\\"")
+            + escapedFullyQualifiedTableName
             + ": import failed (exit status: $exit_status)\"");
     writer.println("  fi");
+    writer.println("else");
+    writer.println(
+        "    echo \"Table "
+            + escapedFullyQualifiedTableName
+            + ": export did not create any CSV file, skipping. Is the table empty?\"");
     writer.println("fi");
     writer.println();
     writer.flush();
