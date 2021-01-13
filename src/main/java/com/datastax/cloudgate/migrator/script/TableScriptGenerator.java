@@ -15,6 +15,7 @@
  */
 package com.datastax.cloudgate.migrator.script;
 
+import com.datastax.cloudgate.migrator.live.ExitStatus;
 import com.datastax.cloudgate.migrator.processor.ExportedColumn;
 import com.datastax.cloudgate.migrator.processor.TableProcessor;
 import com.datastax.cloudgate.migrator.settings.MigrationSettings;
@@ -98,6 +99,15 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("    mkdir -p " + exportAckDir);
     writer.println("    touch " + exportAckFile);
     writer.println("    echo \"$operation_id\" >> " + exportAckFile);
+    writer.println(
+        "  elif [ $exit_status -gt " + ExitStatus.STATUS_CRASHED.exitCode() + " ]; then");
+    writer.println(
+        "    echo \"Table "
+            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
+            + "."
+            + table.getName().asCql(true).replace("\"", "\\\"")
+            + ": export failed unexpectedly, aborting migration (exit status: $exit_status).\"");
+    writer.println("    exit $exit_status");
     writer.println("  else");
     writer.println(
         "    echo \"Table "
@@ -160,6 +170,15 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("    mkdir -p " + importAckDir);
     writer.println("    touch " + importAckFile);
     writer.println("    echo \"$operation_id\" >> " + importAckFile);
+    writer.println(
+        "  elif [ $exit_status -gt " + ExitStatus.STATUS_CRASHED.exitCode() + " ]; then");
+    writer.println(
+        "    echo \"Table "
+            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
+            + "."
+            + table.getName().asCql(true).replace("\"", "\\\"")
+            + ": import failed unexpectedly, aborting migration (exit status: $exit_status).\"");
+    writer.println("    exit $exit_status");
     writer.println("  else");
     writer.println(
         "    echo \"Table "
