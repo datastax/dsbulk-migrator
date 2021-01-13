@@ -64,7 +64,7 @@ public class TableScriptGenerator extends TableProcessor {
             + table.getKeyspace().asCql(true).replace("\"", "\\\"")
             + "."
             + table.getName().asCql(true).replace("\"", "\\\"")
-            + ": already imported, skipping (delete this file to re-import: \""
+            + ": already exported, skipping (delete this file to re-export: \""
             + exportAckFile
             + "\").\"");
     writer.println("else");
