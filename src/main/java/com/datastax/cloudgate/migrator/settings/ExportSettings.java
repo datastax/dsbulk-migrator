@@ -19,6 +19,8 @@ import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
@@ -147,4 +149,14 @@ public class ExportSettings {
               + "This is an advanced setting; you should rarely need to modify the default value.",
       defaultValue = "8C")
   public String splits = "8C";
+
+  @Option(
+      names = "--export-dsbulk-option",
+      paramLabel = "OPT=VALUE",
+      description =
+          "An extra DSBulk option to use when exporting. "
+              + "Any valid DSBulk option can be specified here, and it will passed as is to the DSBulk process. "
+              + "DSBulk options, including driver options, must be passed as '--long.option.name=<value>'. "
+              + "Short options are not supported. ")
+  public List<String> extraDsbulkOptions = new ArrayList<>();
 }

@@ -19,7 +19,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import picocli.CommandLine.Option;
 
-public class DSBulkSettings {
+public class GlobalDSBulkSettings {
 
   @Option(
       names = "--dsbulk-use-embedded",

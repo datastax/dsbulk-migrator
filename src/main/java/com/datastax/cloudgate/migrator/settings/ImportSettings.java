@@ -21,6 +21,8 @@ import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
@@ -147,6 +149,16 @@ public class ImportSettings {
               + "The default is 1970-01-01T00:00:00Z.",
       defaultValue = "1970-01-01T00:00:00Z")
   public Instant defaultTimestamp = Instant.EPOCH;
+
+  @Option(
+      names = "--import-dsbulk-option",
+      paramLabel = "OPT=VALUE",
+      description =
+          "An extra DSBulk option to use when importing. "
+              + "Any valid DSBulk option can be specified here, and it will passed as is to the DSBulk process. "
+              + "DSBulk options, including driver options, must be passed as '--long.option.name=<value>'. "
+              + "Short options are not supported. ")
+  public List<String> extraDsbulkOptions = new ArrayList<>();
 
   public long getDefaultTimestampMicros() {
     return ChronoUnit.MICROS.between(Instant.EPOCH, defaultTimestamp);

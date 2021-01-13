@@ -86,6 +86,11 @@ default value:
       --export-consistency=CONSISTENCY
                              The consistency level to use when exporting data. The default is
                                LOCAL_QUORUM.
+      --export-dsbulk-option=OPT=VALUE
+                             An extra DSBulk option to use when exporting. Any valid DSBulk option
+                               can be specified here, and it will passed as is to the DSBulk
+                               process. DSBulk options, including driver options, must be passed as
+                               '--long.option.name=<value>'. Short options are not supported.
       --export-host=HOST[:PORT]
                              The host name or IP and, optionally, the port of a node from the
                                origin cluster. If the port is not specified, it will default to
@@ -123,6 +128,11 @@ default value:
       --import-default-timestamp=<defaultTimestamp>
                              The default timestamp to use when importing data. Must be a valid
                                instant in ISO-8601 syntax. The default is 1970-01-01T00:00:00Z.
+      --import-dsbulk-option=OPT=VALUE
+                             An extra DSBulk option to use when importing. Any valid DSBulk option
+                               can be specified here, and it will passed as is to the DSBulk
+                               process. DSBulk options, including driver options, must be passed as
+                               '--long.option.name=<value>'. Short options are not supported.
       --import-host=HOST[:PORT]
                              The host name or IP and, optionally, the port of a node from the
                                target cluster. If the port is not specified, it will default to
@@ -215,7 +225,7 @@ passwords will be prompted interactively:
         --import-password # password will be prompted
 
 Migrate live from an existing cluster to an Astra cluster using the embedded DSBulk installation;
-passwords will be prompted interactively:
+passwords will be prompted interactively; extra DSBulk options are passed:
 
     java -jar target/schema-migrator-<VERSION>-embedded-dsbulk.jar migrate-live \
         --data-dir=/path/to/data/dir \
@@ -224,9 +234,13 @@ passwords will be prompted interactively:
         --export-host=my-origin-cluster.com \
         --export-username=user1 \
         --export-password # password will be prompted \
+        --export-dsbulk-option "--connector.csv.maxCharsPerColumn=65536" \
+        --export-dsbulk-option "--executor.maxPerSecond=1000" \
         --import-bundle=/path/to/bundle \
         --import-username=user1 \
-        --import-password # password will be prompted
+        --import-password # password will be prompted \
+        --import-dsbulk-option "--connector.csv.maxCharsPerColumn=65536" \
+        --import-dsbulk-option "--executor.maxPerSecond=1000" 
 
 Note that for the last example, you must use the `schema-migrator-<VERSION>-embedded-dsbulk.jar` fat
 jar, otherwise, an error will be raised because no embedded DSBulk can be found.

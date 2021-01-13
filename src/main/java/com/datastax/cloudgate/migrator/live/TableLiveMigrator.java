@@ -229,6 +229,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add(String.valueOf(settings.dsBulkSettings.dsbulkLogDir));
     args.add("-query");
     args.add(buildExportQuery());
+    args.addAll(settings.exportSettings.extraDsbulkOptions);
     return args;
   }
 
@@ -283,6 +284,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add("-query");
       args.add(buildBatchImportQuery());
     }
+    args.addAll(settings.importSettings.extraDsbulkOptions);
     return args;
   }
 

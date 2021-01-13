@@ -87,7 +87,14 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("    --monitoring.console false \\");
     writer.println("    --engine.executionId \"$operation_id\" \\");
     writer.println("    -logDir \"${dsbulk_logs}\" \\");
-    writer.println("    -query " + buildExportQuery());
+    writer.print("    -query " + buildExportQuery());
+    if (!settings.exportSettings.extraDsbulkOptions.isEmpty()) {
+      for (String s : settings.exportSettings.extraDsbulkOptions) {
+        writer.println(" \\");
+        writer.print("    " + s);
+      }
+    }
+    writer.println();
     writer.println("  exit_status=$?");
     writer.println("  if [ $exit_status -eq 0 ]; then");
     writer.println(
@@ -152,13 +159,20 @@ public class TableScriptGenerator extends TableProcessor {
     int regularColumns = countRegularColumns();
     if (regularColumns == 0) {
       writer.println("    -k \"" + escape(table.getKeyspace()) + "\" \\");
-      writer.println("    -t \"" + escape(table.getName()) + "\"");
+      writer.print("    -t \"" + escape(table.getName()) + "\"");
     } else if (regularColumns == 1) {
-      writer.println("    -query " + buildSingleImportQuery());
+      writer.print("    -query " + buildSingleImportQuery());
     } else {
       writer.println("    --batch.mode DISABLED \\");
-      writer.println("    -query " + buildBatchImportQuery());
+      writer.print("    -query " + buildBatchImportQuery());
     }
+    if (!settings.importSettings.extraDsbulkOptions.isEmpty()) {
+      for (String s : settings.importSettings.extraDsbulkOptions) {
+        writer.println(" \\");
+        writer.print("    " + s);
+      }
+    }
+    writer.println();
     writer.println("  exit_status=$?");
     writer.println("  if [ $exit_status -eq 0 ]; then");
     writer.println(

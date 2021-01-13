@@ -36,5 +36,5 @@ public class MigrationSettings {
   public ImportSettings importSettings = new ImportSettings();
 
   @ArgGroup(exclusive = false, multiplicity = "1")
-  public DSBulkSettings dsBulkSettings = new DSBulkSettings();
+  public GlobalDSBulkSettings dsBulkSettings = new GlobalDSBulkSettings();
 }
