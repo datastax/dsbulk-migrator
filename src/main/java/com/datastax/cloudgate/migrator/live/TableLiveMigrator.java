@@ -203,7 +203,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
     if (isExported()) {
       try (DirectoryStream<Path> stream = Files.newDirectoryStream(tableDataDir)) {
         for (Path entry : stream) {
-          if (entry.startsWith("output") && entry.endsWith(".csv")) {
+          String fileName = entry.getFileName().toString();
+          if (fileName.startsWith("output") && fileName.endsWith(".csv")) {
             return true;
           }
         }
