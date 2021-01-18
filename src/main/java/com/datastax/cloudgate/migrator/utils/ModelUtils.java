@@ -13,12 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.processor;
+package com.datastax.cloudgate.migrator.utils;
 
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
-import com.datastax.cloudgate.migrator.settings.TableType;
-import com.datastax.cloudgate.migrator.utils.SessionUtils;
-import com.datastax.cloudgate.migrator.utils.TableUtils;
+import com.datastax.cloudgate.migrator.model.ExportedColumn;
+import com.datastax.cloudgate.migrator.model.ExportedTable;
+import com.datastax.cloudgate.migrator.model.TableType;
+import com.datastax.cloudgate.migrator.settings.ClusterInfo;
+import com.datastax.cloudgate.migrator.settings.Credentials;
+import com.datastax.cloudgate.migrator.settings.InclusionSettings;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
@@ -38,58 +40,49 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class TableProcessorFactory<T extends TableProcessor> {
+public class ModelUtils {
 
-  public static final Logger LOGGER = LoggerFactory.getLogger(TableProcessorFactory.class);
+  public static final Logger LOGGER = LoggerFactory.getLogger(ModelUtils.class);
 
-  public List<T> create(MigrationSettings settings) {
-
-    List<T> processors = new ArrayList<>();
-    try (CqlSession session = SessionUtils.createExportSession(settings.exportSettings)) {
-      Pattern exportKeyspaces = settings.generalSettings.keyspaces;
-      List<CqlIdentifier> keyspaceNames =
-          session.getMetadata().getKeyspaces().values().stream()
-              .map(KeyspaceMetadata::getName)
-              .filter(name -> exportKeyspaces.matcher(name.asInternal()).matches())
-              .sorted(Comparator.comparing(CqlIdentifier::asInternal))
-              .collect(Collectors.toList());
+  public static List<ExportedTable> buildExportedTables(
+      ClusterInfo origin, Credentials credentials, InclusionSettings inclusionSettings) {
+    List<ExportedTable> exportedTables = new ArrayList<>();
+    try (CqlSession session = SessionUtils.createSession(origin, credentials)) {
       LOGGER.info("Tables to migrate:");
-      for (CqlIdentifier keyspaceName : keyspaceNames) {
-        KeyspaceMetadata keyspace = session.getMetadata().getKeyspaces().get(keyspaceName);
-        Pattern exportTables = settings.generalSettings.tables;
-        TableType tableType = settings.generalSettings.tableType;
-        List<TableMetadata> tables =
-            keyspace.getTables().values().stream()
-                .sorted(Comparator.comparing(t -> t.getName().asInternal()))
-                .filter(table -> !table.isVirtual())
-                .filter(table -> exportTables.matcher(table.getName().asInternal()).matches())
-                .filter(table -> tableType == TableType.all || tableType == getTableType(table))
-                .collect(Collectors.toList());
-        if (!tables.isEmpty()) {
-          tables.stream()
-              .map(
-                  table ->
-                      String.format(
-                          "- %s (%s table)",
-                          TableUtils.getFullyQualifiedTableName(table),
-                          TableUtils.isCounterTable(table) ? "counter" : "regular"))
-              .forEach(LOGGER::info);
-          for (TableMetadata table : tables) {
-            List<ExportedColumn> exportedColumns = buildExportedColumns(table, session);
-            processors.add(create(table, settings, exportedColumns));
-          }
+      List<KeyspaceMetadata> keyspaces = getExportedKeyspaces(session, inclusionSettings);
+      for (KeyspaceMetadata keyspace : keyspaces) {
+        List<TableMetadata> tables = getExportedTablesInKeyspace(keyspace, inclusionSettings);
+        for (TableMetadata table : tables) {
+          List<ExportedColumn> exportedColumns = buildExportedColumns(table, session);
+          ExportedTable exportedTable = new ExportedTable(keyspace, table, exportedColumns);
+          exportedTables.add(exportedTable);
+          LOGGER.info(
+              "- {} ({})", exportedTable, exportedTable.counterTable ? "counter" : "regular");
         }
       }
     }
-    if (processors.size() == 0) {
-      throw new IllegalStateException("No tables to migrate");
-    }
-    LOGGER.info("Migrating {} tables in total", processors.size());
-    return processors;
+    return exportedTables;
   }
 
-  protected abstract T create(
-      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns);
+  private static List<KeyspaceMetadata> getExportedKeyspaces(
+      CqlSession session, InclusionSettings settings) {
+    Pattern exportKeyspaces = settings.getKeyspacesPattern();
+    return session.getMetadata().getKeyspaces().values().stream()
+        .filter(ks -> exportKeyspaces.matcher(ks.getName().asInternal()).matches())
+        .collect(Collectors.toList());
+  }
+
+  private static List<TableMetadata> getExportedTablesInKeyspace(
+      KeyspaceMetadata keyspace, InclusionSettings settings) {
+    Pattern exportTables = settings.getTablesPattern();
+    TableType tableType = settings.getTableType();
+    return keyspace.getTables().values().stream()
+        .sorted(Comparator.comparing(t -> t.getName().asInternal()))
+        .filter(table -> !table.isVirtual())
+        .filter(table -> exportTables.matcher(table.getName().asInternal()).matches())
+        .filter(table -> tableType == TableType.all || tableType == getTableType(table))
+        .collect(Collectors.toList());
+  }
 
   private static TableType getTableType(TableMetadata table) {
     return TableUtils.isCounterTable(table) ? TableType.counter : TableType.regular;

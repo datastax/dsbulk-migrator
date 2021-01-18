@@ -56,6 +56,11 @@ public class ExportSettings {
     public Path bundle;
 
     @Override
+    public boolean isOrigin() {
+      return true;
+    }
+
+    @Override
     public List<InetSocketAddress> getContactPoints() {
       if (hostsAndPorts == null || hostsAndPorts.isEmpty()) {
         return Collections.emptyList();

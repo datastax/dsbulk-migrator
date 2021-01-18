@@ -19,12 +19,26 @@ import static com.datastax.oss.dsbulk.tests.utils.FileUtils.readFile;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.datastax.cloudgate.migrator.script.SchemaScriptGenerator;
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.script.ScriptGenerationSettings;
+import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportClusterInfo;
+import com.datastax.cloudgate.migrator.settings.ImportSettings.ImportClusterInfo;
+import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
+import com.datastax.oss.dsbulk.tests.utils.FileUtils;
 import com.datastax.oss.simulacron.server.BoundCluster;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collections;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class ScriptGenerationIT extends ITBase {
+class ScriptGenerationIT extends SimulacronITBase {
+
+  Path dataDir;
+  Path logsDir;
+  Path exportScript;
+  Path importScript;
 
   ScriptGenerationIT(BoundCluster origin, BoundCluster target) {
     super(origin, target);
@@ -33,7 +47,7 @@ public class ScriptGenerationIT extends ITBase {
   @Test
   void should_should_generate_scripts() throws IOException {
     // given
-    MigrationSettings settings = createSettings(false);
+    ScriptGenerationSettings settings = createSettings();
     // when
     SchemaScriptGenerator generator = new SchemaScriptGenerator(settings);
     generator.generate();
@@ -51,5 +65,36 @@ public class ScriptGenerationIT extends ITBase {
             "echo 'Importing table test.t1'",
             "  \"${dsbulk_cmd}\" load \\",
             "    -query \"INSERT INTO test.t1 (pk, cc, v) VALUES (:pk, :cc, :v) USING TIMESTAMP :v_writetime AND TTL :v_ttl\"");
+  }
+
+  @BeforeEach
+  void createTempDirs() throws IOException {
+    dataDir = Files.createTempDirectory("data");
+    logsDir = Files.createTempDirectory("logs");
+    exportScript = dataDir.resolve("cloud-gate-migrator-export.sh");
+    importScript = dataDir.resolve("cloud-gate-migrator-import.sh");
+  }
+
+  @AfterEach
+  void deleteTempDirs() {
+    if (dataDir != null && Files.exists(dataDir)) {
+      FileUtils.deleteDirectory(dataDir);
+    }
+    if (logsDir != null && Files.exists(logsDir)) {
+      FileUtils.deleteDirectory(logsDir);
+    }
+  }
+
+  private ScriptGenerationSettings createSettings() {
+    ScriptGenerationSettings settings = new ScriptGenerationSettings();
+    settings.dataDir = dataDir;
+    settings.exportSettings.clusterInfo = new ExportClusterInfo();
+    settings.importSettings.clusterInfo = new ImportClusterInfo();
+    settings.exportSettings.clusterInfo.hostsAndPorts =
+        Collections.singletonList(HostAndPort.fromString(originHost));
+    settings.importSettings.clusterInfo.hostsAndPorts =
+        Collections.singletonList(HostAndPort.fromString(targetHost));
+    settings.dsbulkLogDir = logsDir;
+    return settings;
   }
 }

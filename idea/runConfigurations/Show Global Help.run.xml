@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Show Script Generation Help Usage" type="Application" factoryName="Application">
+  <configuration default="false" name="Show Global Help" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator" />
     <module name="cloud-gate-schema-migrator" />
-    <option name="PROGRAM_PARAMETERS" value="generate-script --help" />
+    <option name="PROGRAM_PARAMETERS" value="--help" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

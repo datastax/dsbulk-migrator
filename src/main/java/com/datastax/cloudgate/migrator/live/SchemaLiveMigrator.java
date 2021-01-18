@@ -15,9 +15,8 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.ModelUtils;
 import com.datastax.cloudgate.migrator.utils.SessionUtils;
-import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.shaded.guava.common.util.concurrent.MoreExecutors;
 import java.util.ArrayList;
@@ -37,11 +36,11 @@ import org.slf4j.LoggerFactory;
 
 public class SchemaLiveMigrator {
 
-  public static final Logger LOGGER = LoggerFactory.getLogger(SchemaLiveMigrator.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(SchemaLiveMigrator.class);
 
   private static final Object POISON_PILL = new Object();
 
-  private final MigrationSettings settings;
+  private final LiveMigrationSettings settings;
   private final BlockingQueue<TableLiveMigrator> exportQueue;
   private final BlockingQueue<Object> importQueue;
   private final ExecutorService pool;
@@ -54,19 +53,43 @@ public class SchemaLiveMigrator {
   private final boolean hasRegularTables;
   private final boolean hasCounterTables;
 
-  public SchemaLiveMigrator(MigrationSettings settings) {
+  public SchemaLiveMigrator(LiveMigrationSettings settings) {
     this.settings = settings;
+    if (settings.dsbulkEmbedded) {
+      checkEmbeddedDSBulkAvailable();
+    }
     exportQueue = new LinkedBlockingQueue<>();
     importQueue = new LinkedBlockingQueue<>();
     pool =
-        settings.generalSettings.maxConcurrentOps == 1
+        settings.maxConcurrentOps == 1
             ? MoreExecutors.newDirectExecutorService()
-            : Executors.newFixedThreadPool(settings.generalSettings.maxConcurrentOps);
-    migrators = new TableMigratorFactory().create(settings);
+            : Executors.newFixedThreadPool(settings.maxConcurrentOps);
+    migrators =
+        ModelUtils.buildExportedTables(
+                settings.exportSettings.clusterInfo, settings.exportSettings.credentials, settings)
+            .stream()
+            .map(
+                exportedTable -> {
+                  if (settings.dsbulkEmbedded) {
+                    return new EmbeddedTableLiveMigrator(exportedTable, settings);
+                  } else {
+                    return new ExternalTableLiveMigrator(exportedTable, settings);
+                  }
+                })
+            .collect(Collectors.toList());
     hasRegularTables =
-        migrators.stream().anyMatch(migrator -> !TableUtils.isCounterTable(migrator.getTable()));
+        migrators.stream().anyMatch(migrator -> !migrator.getExportedTable().counterTable);
     hasCounterTables =
-        migrators.stream().anyMatch(migrator -> TableUtils.isCounterTable(migrator.getTable()));
+        migrators.stream().anyMatch(migrator -> migrator.getExportedTable().counterTable);
+  }
+
+  private void checkEmbeddedDSBulkAvailable() {
+    try {
+      Class.forName("com.datastax.oss.dsbulk.runner.DataStaxBulkLoader");
+    } catch (ClassNotFoundException e) {
+      throw new IllegalStateException(
+          "DSBulk is not available on the classpath; cannot use embedded mode.");
+    }
   }
 
   public ExitStatus migrate() {
@@ -76,13 +99,13 @@ public class SchemaLiveMigrator {
       askPermissionToTruncate();
       if (hasRegularTables) {
         LOGGER.info("Migrating regular tables...");
-        migrateTables(migrator -> !TableUtils.isCounterTable(migrator.getTable()));
+        migrateTables(migrator -> !migrator.getExportedTable().counterTable);
       }
       exportQueue.clear();
       importQueue.clear();
       if (hasCounterTables) {
         LOGGER.info("Migrating counter tables...");
-        migrateTables(migrator -> TableUtils.isCounterTable(migrator.getTable()));
+        migrateTables(migrator -> migrator.getExportedTable().counterTable);
       }
     } catch (Exception e) {
       LOGGER.error(e.getMessage(), e);
@@ -93,14 +116,12 @@ public class SchemaLiveMigrator {
           successful.size(),
           failed.size());
       for (TableMigrationReport report : successful) {
-        LOGGER.info(
-            "Table {} migrated successfully.",
-            TableUtils.getFullyQualifiedTableName(report.getMigrator().getTable()));
+        LOGGER.info("Table {} migrated successfully.", report.getMigrator().getExportedTable());
       }
       for (TableMigrationReport report : failed) {
         LOGGER.error(
             "Table {} could not be {}: operation {} exited with {}.",
-            TableUtils.getFullyQualifiedTableName(report.getMigrator().getTable()),
+            report.getMigrator().getExportedTable(),
             report.isExport() ? "exported" : "imported",
             report.getOperationId(),
             report.getStatus());
@@ -117,7 +138,9 @@ public class SchemaLiveMigrator {
 
   @SuppressWarnings("EmptyTryBlock")
   private void testTargetClusterConnectivity() {
-    try (CqlSession ignored = SessionUtils.createImportSession(settings.importSettings)) {}
+    try (CqlSession ignored =
+        SessionUtils.createSession(
+            settings.importSettings.clusterInfo, settings.importSettings.credentials)) {}
   }
 
   private void migrateTables(Predicate<TableLiveMigrator> filter) {
@@ -125,7 +148,7 @@ public class SchemaLiveMigrator {
         migrators.stream().filter(filter).collect(Collectors.toList());
     exportQueue.addAll(filtered);
     List<CompletableFuture<?>> futures = new ArrayList<>();
-    for (int i = 0; i < settings.generalSettings.maxConcurrentOps; i++) {
+    for (int i = 0; i < settings.maxConcurrentOps; i++) {
       futures.add(CompletableFuture.runAsync(this::exportTables, pool));
       futures.add(CompletableFuture.runAsync(this::importTables, pool));
     }
@@ -141,7 +164,7 @@ public class SchemaLiveMigrator {
       } catch (Exception e) {
         LOGGER.error(
             "Table "
-                + TableUtils.getFullyQualifiedTableName(migrator.getTable())
+                + migrator.getExportedTable()
                 + ": unexpected error when exporting data, aborting",
             e);
         report =
@@ -175,7 +198,7 @@ public class SchemaLiveMigrator {
       } catch (Exception e) {
         LOGGER.error(
             "Table "
-                + TableUtils.getFullyQualifiedTableName(migrator.getTable())
+                + migrator.getExportedTable()
                 + ": unexpected error when importing data, aborting",
             e);
         report =
@@ -190,24 +213,22 @@ public class SchemaLiveMigrator {
   }
 
   private void askPermissionToTruncate() {
-    if (hasCounterTables && !settings.generalSettings.skipTruncateConfirmation) {
+    if (hasCounterTables && !settings.skipTruncateConfirmation) {
       List<TableLiveMigrator> remainingCounterTables =
           migrators.stream()
-              .filter(migrator -> TableUtils.isCounterTable(migrator.getTable()))
+              .filter(migrator -> migrator.getExportedTable().counterTable)
               .filter(migrator -> !migrator.isImported())
               .collect(Collectors.toList());
       if (!remainingCounterTables.isEmpty()) {
         // Bypass the logging system and hit System.err directly
         System.err.println("WARNING!");
         System.err.println(
-            (settings.generalSettings.truncateBeforeExport ? "Before" : "After")
+            (settings.truncateBeforeExport ? "Before" : "After")
                 + " they are exported, counter tables must be truncated on the target cluster.");
         System.err.println(
             "If you agree to proceed, the following tables WILL BE TRUNCATED on the TARGET cluster:");
         remainingCounterTables.forEach(
-            migrator ->
-                System.err.printf(
-                    "- %s%n", TableUtils.getFullyQualifiedTableName(migrator.getTable())));
+            migrator -> System.err.printf("- %s%n", migrator.getExportedTable()));
         System.err.println(
             "Note that the above tables will NOT be truncated on the origin cluster.");
         while (true) {
@@ -218,7 +239,7 @@ public class SchemaLiveMigrator {
             return;
           } else if (input.isBlank() || input.equalsIgnoreCase("n")) {
             migrators.stream()
-                .filter(migrator -> TableUtils.isCounterTable(migrator.getTable()))
+                .filter(migrator -> migrator.getExportedTable().counterTable)
                 .forEach(
                     migrator ->
                         failed.add(
@@ -226,7 +247,7 @@ public class SchemaLiveMigrator {
                                 migrator,
                                 ExitStatus.STATUS_ABORTED_FATAL_ERROR,
                                 null,
-                                settings.generalSettings.truncateBeforeExport)));
+                                settings.truncateBeforeExport)));
             throw new CancellationException("Truncate permission denied by user");
           }
         }

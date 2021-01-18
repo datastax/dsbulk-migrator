@@ -15,9 +15,12 @@
  */
 package com.datastax.cloudgate.migrator;
 
+import com.datastax.cloudgate.migrator.ddl.DdlGenerationSettings;
+import com.datastax.cloudgate.migrator.ddl.SchemaDdlGenerator;
+import com.datastax.cloudgate.migrator.live.LiveMigrationSettings;
 import com.datastax.cloudgate.migrator.live.SchemaLiveMigrator;
 import com.datastax.cloudgate.migrator.script.SchemaScriptGenerator;
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.script.ScriptGenerationSettings;
 import com.datastax.cloudgate.migrator.settings.VersionProvider;
 import com.datastax.cloudgate.migrator.utils.LoggingUtils;
 import java.io.IOException;
@@ -63,7 +66,8 @@ public class CloudGateMigrator {
       optionListHeading = "Available options:%n",
       abbreviateSynopsis = true,
       usageHelpWidth = 100)
-  private int migrateLive(@ArgGroup(exclusive = false) MigrationSettings settings) {
+  private int migrateLive(
+      @ArgGroup(exclusive = false, multiplicity = "1") LiveMigrationSettings settings) {
     SchemaLiveMigrator schemaLiveMigrator = new SchemaLiveMigrator(settings);
     return schemaLiveMigrator.migrate().exitCode();
   }
@@ -76,9 +80,25 @@ public class CloudGateMigrator {
       optionListHeading = "Available options:%n",
       abbreviateSynopsis = true,
       usageHelpWidth = 100)
-  private int generateScript(@ArgGroup(exclusive = false) MigrationSettings settings)
+  private int generateScript(
+      @ArgGroup(exclusive = false, multiplicity = "1") ScriptGenerationSettings settings)
       throws IOException {
     SchemaScriptGenerator schemaScriptGenerator = new SchemaScriptGenerator(settings);
     return schemaScriptGenerator.generate().exitCode();
+  }
+
+  @Command(
+      name = "generate-ddl",
+      description =
+          "Reads the schema from the origin cluster and "
+              + "generates CQL files to recreate it in the target cluster.",
+      optionListHeading = "Available options:%n",
+      abbreviateSynopsis = true,
+      usageHelpWidth = 100)
+  private int generateDdl(
+      @ArgGroup(exclusive = false, multiplicity = "1") DdlGenerationSettings settings)
+      throws IOException {
+    SchemaDdlGenerator schemaDdlGenerator = new SchemaDdlGenerator(settings);
+    return schemaDdlGenerator.generate().exitCode();
   }
 }

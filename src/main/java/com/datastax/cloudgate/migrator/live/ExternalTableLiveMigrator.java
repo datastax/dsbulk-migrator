@@ -15,10 +15,7 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
-import com.datastax.cloudgate.migrator.processor.ExportedColumn;
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
-import com.datastax.cloudgate.migrator.utils.TableUtils;
-import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
+import com.datastax.cloudgate.migrator.model.ExportedTable;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,25 +31,22 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ExternalTableLiveMigrator.class);
 
-  public ExternalTableLiveMigrator(
-      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
-    super(table, settings, exportedColumns);
+  public ExternalTableLiveMigrator(ExportedTable exportedTable, LiveMigrationSettings settings) {
+    super(exportedTable, settings);
   }
 
   @Override
   protected ExitStatus invokeDsbulk(List<String> args) {
     try {
       ProcessBuilder builder = new ProcessBuilder();
-      args.add(0, String.valueOf(settings.dsBulkSettings.dsbulkCmd));
+      args.add(0, String.valueOf(settings.dsbulkCmd));
       builder.command(args);
-      if (settings.dsBulkSettings.dsbulkWorkingDir != null) {
-        builder.directory(settings.dsBulkSettings.dsbulkWorkingDir.toFile());
+      if (settings.dsbulkWorkingDir != null) {
+        builder.directory(settings.dsbulkWorkingDir.toFile());
       }
       Process process = builder.start();
       LOGGER.debug(
-          "Table {}: process started (PID {})",
-          TableUtils.getFullyQualifiedTableName(table),
-          process.pid());
+          "Table {}: process started (PID {})", exportedTable.fullyQualifiedName, process.pid());
       ExecutorService pool = Executors.newFixedThreadPool(2);
       ExitStatus status;
       try {
@@ -69,7 +63,7 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
       }
       LOGGER.debug(
           "Table {}: process finished (PID {}, exit code {})",
-          TableUtils.getFullyQualifiedTableName(table),
+          exportedTable.fullyQualifiedName,
           process.pid(),
           status);
       return status;

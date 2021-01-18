@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="ScriptGenerator" type="Application" factoryName="Application">
+  <configuration default="false" name="Script Generator" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator" />
     <module name="cloud-gate-schema-migrator" />
     <option name="PROGRAM_PARAMETERS" value="generate-script --data-dir=target/export --table-types=all --dsbulk-log-dir=target/logs --export-host=127.0.0.1:9042 --export-host=127.0.0.2:9042 --export-username=cassandra --export-password --export-dsbulk-option &quot;--connector.csv.maxCharsPerColumn=65536&quot; --export-dsbulk-option &quot;--executor.maxPerSecond=1000&quot; --import-host=127.0.1.1:9042 --import-username=cassandra --import-password --import-dsbulk-option &quot;--connector.csv.maxCharsPerColumn=65536&quot; --import-dsbulk-option &quot;--executor.maxPerSecond=1000&quot;" />

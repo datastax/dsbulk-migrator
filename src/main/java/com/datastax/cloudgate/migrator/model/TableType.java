@@ -13,21 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.settings;
+package com.datastax.cloudgate.migrator.model;
 
-import java.net.InetSocketAddress;
-import java.nio.file.Path;
-import java.util.List;
-
-public interface ClusterInfo {
-
-  boolean isOrigin();
-
-  List<InetSocketAddress> getContactPoints();
-
-  Path getBundle();
-
-  default boolean isAstra() {
-    return getBundle() != null;
-  }
+public enum TableType {
+  regular,
+  counter,
+  all
 }

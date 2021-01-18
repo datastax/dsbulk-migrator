@@ -13,14 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.settings;
+package com.datastax.cloudgate.migrator.live;
 
+import com.datastax.cloudgate.migrator.model.TableType;
+import com.datastax.cloudgate.migrator.settings.ExportSettings;
+import com.datastax.cloudgate.migrator.settings.ImportSettings;
+import com.datastax.cloudgate.migrator.settings.InclusionSettings;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.regex.Pattern;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
-public class GeneralSettings {
+public class LiveMigrationSettings implements InclusionSettings {
+
+  @Option(
+      names = {"-h", "--help"},
+      usageHelp = true,
+      description = "Displays this help message.")
+  boolean usageHelpRequested;
 
   @Option(
       names = {"-d", "--data-dir"},
@@ -43,7 +54,7 @@ public class GeneralSettings {
               + "The default is to migrate all keyspaces except system keyspaces, DSE-specific keyspaces, and the OpsCenter keyspace. "
               + "Case-sensitive keyspace names must be entered in their exact case.",
       defaultValue = "^(?!system|dse|OpsCenter)\\w+$")
-  public Pattern keyspaces = Pattern.compile("^(?!system|dse|OpsCenter)\\w+$");
+  public Pattern keyspacesPattern = Pattern.compile("^(?!system|dse|OpsCenter)\\w+$");
 
   @Option(
       names = {"-t", "--tables"},
@@ -53,7 +64,7 @@ public class GeneralSettings {
               + "The default is to migrate all tables inside the keyspaces that were selected for migration with --keyspaces. "
               + "Case-sensitive table names must be entered in their exact case.",
       defaultValue = ".*")
-  public Pattern tables = Pattern.compile(".*");
+  public Pattern tablesPattern = Pattern.compile(".*");
 
   @Option(
       names = "--table-types",
@@ -61,6 +72,50 @@ public class GeneralSettings {
       description = "The table types to migrate (regular, counter, or all). Default is all.",
       defaultValue = "all")
   public TableType tableType = TableType.all;
+
+  @ArgGroup(exclusive = false, multiplicity = "1")
+  public ExportSettings exportSettings = new ExportSettings();
+
+  @ArgGroup(exclusive = false, multiplicity = "1")
+  public ImportSettings importSettings = new ImportSettings();
+
+  @Option(
+      names = {"-e", "--dsbulk-use-embedded"},
+      description =
+          "Use the embedded DSBulk version instead of an external one. "
+              + "The default is to use an external DSBulk command.",
+      defaultValue = "false")
+  public boolean dsbulkEmbedded = false;
+
+  @Option(
+      names = {"-c", "--dsbulk-cmd"},
+      paramLabel = "CMD",
+      description =
+          "The external DSBulk command to use. Ignored if the embedded DSBulk is being used. "
+              + "The default is simply 'dsbulk', assuming that the command is available through the "
+              + "PATH variable contents.",
+      defaultValue = "dsbulk")
+  public String dsbulkCmd = "dsbulk";
+
+  @Option(
+      names = {"-l", "--dsbulk-log-dir"},
+      paramLabel = "PATH",
+      description =
+          "The directory where DSBulk should store its logs. "
+              + "The default is a 'logs' subdirectory in the current working directory. "
+              + "This subdirectory will be created if it does not exist. "
+              + "Each DSBulk operation will create a subdirectory inside the log directory specified here.",
+      defaultValue = "logs")
+  public Path dsbulkLogDir = Paths.get("logs");
+
+  @Option(
+      names = {"-w", "--dsbulk-working-dir"},
+      paramLabel = "PATH",
+      description =
+          "The directory where DSBulk should be executed. "
+              + "Ignored if the embedded DSBulk is being used. "
+              + "If unspecified, it defaults to the current working directory.")
+  public Path dsbulkWorkingDir;
 
   @Option(
       names = "--max-concurrent-ops",
@@ -88,4 +143,19 @@ public class GeneralSettings {
               + "Only applicable when migrating counter tables, ignored otherwise.",
       defaultValue = "false")
   public boolean truncateBeforeExport = false;
+
+  @Override
+  public Pattern getKeyspacesPattern() {
+    return keyspacesPattern;
+  }
+
+  @Override
+  public Pattern getTablesPattern() {
+    return tablesPattern;
+  }
+
+  @Override
+  public TableType getTableType() {
+    return tableType;
+  }
 }

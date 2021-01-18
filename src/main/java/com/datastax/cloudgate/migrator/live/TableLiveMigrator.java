@@ -15,13 +15,10 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
-import com.datastax.cloudgate.migrator.processor.ExportedColumn;
-import com.datastax.cloudgate.migrator.processor.TableProcessor;
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.model.ExportedTable;
+import com.datastax.cloudgate.migrator.model.TableProcessor;
 import com.datastax.cloudgate.migrator.utils.SessionUtils;
-import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -42,6 +39,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(TableLiveMigrator.class);
 
+  protected final LiveMigrationSettings settings;
+
   protected final Path tableDataDir;
 
   protected final Path exportAckDir;
@@ -50,23 +49,28 @@ public abstract class TableLiveMigrator extends TableProcessor {
   protected final Path importAckDir;
   protected final Path importAckFile;
 
-  public TableLiveMigrator(
-      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
-    super(table, settings, exportedColumns);
+  public TableLiveMigrator(ExportedTable exportedTable, LiveMigrationSettings settings) {
+    super(exportedTable);
+    this.settings = settings;
     this.tableDataDir =
         settings
-            .generalSettings
             .dataDir
-            .resolve(table.getKeyspace().asInternal())
-            .resolve(table.getName().asInternal());
-    this.exportAckDir = settings.generalSettings.dataDir.resolve("__exported__");
-    this.importAckDir = settings.generalSettings.dataDir.resolve("__imported__");
+            .resolve(exportedTable.keyspace.getName().asInternal())
+            .resolve(exportedTable.table.getName().asInternal());
+    this.exportAckDir = settings.dataDir.resolve("__exported__");
+    this.importAckDir = settings.dataDir.resolve("__imported__");
     this.exportAckFile =
         exportAckDir.resolve(
-            table.getKeyspace().asInternal() + "__" + table.getName().asInternal() + ".exported");
+            exportedTable.keyspace.getName().asInternal()
+                + "__"
+                + exportedTable.table.getName().asInternal()
+                + ".exported");
     this.importAckFile =
         importAckDir.resolve(
-            table.getKeyspace().asInternal() + "__" + table.getName().asInternal() + ".imported");
+            exportedTable.keyspace.getName().asInternal()
+                + "__"
+                + exportedTable.table.getName().asInternal()
+                + ".imported");
   }
 
   public TableMigrationReport exportTable() {
@@ -74,23 +78,22 @@ public abstract class TableLiveMigrator extends TableProcessor {
     if ((operationId = retrieveExportOperationId()) != null) {
       LOGGER.warn(
           "Table {}.{}: already exported, skipping (delete this file to re-export: {}).",
-          table.getKeyspace(),
-          table.getName(),
+          exportedTable.keyspace.getName(),
+          exportedTable.table.getName(),
           exportAckFile);
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, true);
     } else {
-      if (settings.generalSettings.truncateBeforeExport && TableUtils.isCounterTable(table)) {
+      if (settings.truncateBeforeExport && exportedTable.counterTable) {
         truncateTable();
       }
-      LOGGER.info("Exporting {}...", TableUtils.getFullyQualifiedTableName(table));
+      LOGGER.info("Exporting {}...", exportedTable.fullyQualifiedName);
       operationId = createOperationId(true);
       List<String> args = createExportArgs(operationId);
       ExitStatus status = invokeDsbulk(args);
-      LOGGER.info(
-          "Export of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
+      LOGGER.info("Export of {} finished with {}", exportedTable.fullyQualifiedName, status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
-        if (!settings.generalSettings.truncateBeforeExport && TableUtils.isCounterTable(table)) {
+        if (!settings.truncateBeforeExport && exportedTable.counterTable) {
           truncateTable();
         }
       }
@@ -103,28 +106,27 @@ public abstract class TableLiveMigrator extends TableProcessor {
     if ((operationId = retrieveImportOperationId()) != null) {
       LOGGER.warn(
           "Table {}.{}: already imported, skipping (delete this file to re-import: {}).",
-          table.getKeyspace(),
-          table.getName(),
+          exportedTable.keyspace.getName(),
+          exportedTable.table.getName(),
           importAckFile);
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, false);
     } else if (!isExported()) {
       throw new IllegalStateException(
-          "Cannot import non-exported table: " + TableUtils.getFullyQualifiedTableName(table));
+          "Cannot import non-exported table: " + exportedTable.fullyQualifiedName);
     } else if (!hasExportedData()) {
       LOGGER.warn(
           "Table {}.{}: export did not create any CSV file, skipping import. Is the table empty?",
-          table.getKeyspace(),
-          table.getName());
+          exportedTable.keyspace.getName(),
+          exportedTable.table.getName());
       operationId = createOperationId(false);
       createImportAckFile(operationId);
       return new TableMigrationReport(this, ExitStatus.STATUS_OK, operationId, false);
     } else {
-      LOGGER.info("Importing {}...", TableUtils.getFullyQualifiedTableName(table));
+      LOGGER.info("Importing {}...", exportedTable.fullyQualifiedName);
       operationId = createOperationId(false);
       List<String> args = createImportArgs(operationId);
       ExitStatus status = invokeDsbulk(args);
-      LOGGER.info(
-          "Import of {} finished with {}", TableUtils.getFullyQualifiedTableName(table), status);
+      LOGGER.info("Import of {} finished with {}", exportedTable.fullyQualifiedName, status);
       if (status == ExitStatus.STATUS_OK) {
         createImportAckFile(operationId);
       }
@@ -148,8 +150,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
     return String.format(
         "%s_%s_%s_%s",
         (export ? "EXPORT" : "IMPORT"),
-        table.getKeyspace().asInternal(),
-        table.getName().asInternal(),
+        exportedTable.keyspace.getName().asInternal(),
+        exportedTable.table.getName().asInternal(),
         timestamp);
   }
 
@@ -253,7 +255,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("--engine.executionId");
     args.add(operationId);
     args.add("-logDir");
-    args.add(String.valueOf(settings.dsBulkSettings.dsbulkLogDir));
+    args.add(String.valueOf(settings.dsbulkLogDir));
     args.add("-query");
     args.add(buildExportQuery());
     args.addAll(settings.exportSettings.extraDsbulkOptions);
@@ -295,15 +297,15 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("--engine.executionId");
     args.add(operationId);
     args.add("-logDir");
-    args.add(String.valueOf(settings.dsBulkSettings.dsbulkLogDir));
+    args.add(String.valueOf(settings.dsbulkLogDir));
     args.add("-m");
     args.add(buildImportMapping());
     int regularColumns = countRegularColumns();
     if (regularColumns == 0) {
       args.add("-k");
-      args.add(escape(table.getKeyspace()));
+      args.add(escape(exportedTable.keyspace.getName()));
       args.add("-t");
-      args.add(escape(table.getName()));
+      args.add(escape(exportedTable.table.getName()));
     } else if (regularColumns == 1) {
       args.add("-query");
       args.add(buildSingleImportQuery());
@@ -318,9 +320,11 @@ public abstract class TableLiveMigrator extends TableProcessor {
   }
 
   private void truncateTable() {
-    String tableName = TableUtils.getFullyQualifiedTableName(table);
+    String tableName = exportedTable.fullyQualifiedName;
     LOGGER.info("Truncating {} on target cluster...", tableName);
-    try (CqlSession session = SessionUtils.createImportSession(settings.importSettings)) {
+    try (CqlSession session =
+        SessionUtils.createSession(
+            settings.importSettings.clusterInfo, settings.importSettings.credentials)) {
       session.execute("TRUNCATE " + tableName);
       LOGGER.info("Successfully truncated {} on target cluster", tableName);
     }

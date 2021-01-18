@@ -16,16 +16,13 @@
 package com.datastax.cloudgate.migrator.script;
 
 import com.datastax.cloudgate.migrator.live.ExitStatus;
-import com.datastax.cloudgate.migrator.processor.ExportedColumn;
-import com.datastax.cloudgate.migrator.processor.TableProcessor;
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
-import com.datastax.cloudgate.migrator.utils.TableUtils;
-import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
+import com.datastax.cloudgate.migrator.model.ExportedTable;
+import com.datastax.cloudgate.migrator.model.TableProcessor;
 import java.io.PrintWriter;
-import java.util.List;
 
 public class TableScriptGenerator extends TableProcessor {
 
+  private final ScriptGenerationSettings settings;
   private final String tableDataDir;
   private final String exportAckDir;
   private final String importAckDir;
@@ -33,37 +30,37 @@ public class TableScriptGenerator extends TableProcessor {
   private final String importAckFile;
   private final String escapedFullyQualifiedTableName;
 
-  public TableScriptGenerator(
-      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
-    super(table, settings, exportedColumns);
+  public TableScriptGenerator(ExportedTable exportedTable, ScriptGenerationSettings settings) {
+    super(exportedTable);
+    this.settings = settings;
     tableDataDir =
         "\"${data_dir}/"
-            + this.table.getKeyspace().asInternal()
+            + this.exportedTable.keyspace.getName().asInternal()
             + "/"
-            + this.table.getName().asInternal()
+            + this.exportedTable.table.getName().asInternal()
             + "\"";
     exportAckDir = "\"${data_dir}/__exported__\"";
     importAckDir = "\"${data_dir}/__imported__\"";
     exportAckFile =
         "\"${data_dir}/__exported__/"
-            + this.table.getKeyspace().asInternal()
+            + this.exportedTable.keyspace.getName().asInternal()
             + "__"
-            + this.table.getName().asInternal()
+            + this.exportedTable.table.getName().asInternal()
             + ".exported\"";
     importAckFile =
         "\"${data_dir}/__imported__/"
-            + this.table.getKeyspace().asInternal()
+            + this.exportedTable.keyspace.getName().asInternal()
             + "__"
-            + this.table.getName().asInternal()
+            + this.exportedTable.table.getName().asInternal()
             + ".imported\"";
     escapedFullyQualifiedTableName =
-        this.table.getKeyspace().asCql(true).replace("\"", "\\\"")
+        this.exportedTable.keyspace.getName().asCql(true).replace("\"", "\\\"")
             + "."
-            + this.table.getName().asCql(true).replace("\"", "\\\"");
+            + this.exportedTable.table.getName().asCql(true).replace("\"", "\\\"");
   }
 
   public void printExportScript(PrintWriter writer) {
-    writer.println("echo 'Exporting table " + TableUtils.getFullyQualifiedTableName(table) + "'");
+    writer.println("echo 'Exporting table " + exportedTable.fullyQualifiedName + "'");
     writer.println("if [[ -f " + exportAckFile + " ]]; then");
     writer.println(
         "  echo \"Table "
@@ -111,9 +108,9 @@ public class TableScriptGenerator extends TableProcessor {
         "  elif [ $exit_status -gt " + ExitStatus.STATUS_CRASHED.exitCode() + " ]; then");
     writer.println(
         "    echo \"Table "
-            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
+            + exportedTable.keyspace.getName().asCql(true).replace("\"", "\\\"")
             + "."
-            + table.getName().asCql(true).replace("\"", "\\\"")
+            + exportedTable.table.getName().asCql(true).replace("\"", "\\\"")
             + ": export failed unexpectedly, aborting migration (exit status: $exit_status).\"");
     writer.println("    exit $exit_status");
     writer.println("  else");
@@ -128,7 +125,7 @@ public class TableScriptGenerator extends TableProcessor {
   }
 
   public void printImportScript(PrintWriter writer) {
-    writer.println("echo 'Importing table " + TableUtils.getFullyQualifiedTableName(table) + "'");
+    writer.println("echo 'Importing table " + exportedTable.fullyQualifiedName + "'");
     writer.println("if [[ -f " + importAckFile + " ]]; then");
     writer.println(
         "  echo \"Table "
@@ -165,8 +162,8 @@ public class TableScriptGenerator extends TableProcessor {
     writer.println("    -m " + buildImportMapping() + " \\");
     int regularColumns = countRegularColumns();
     if (regularColumns == 0) {
-      writer.println("    -k \"" + escape(table.getKeyspace()) + "\" \\");
-      writer.print("    -t \"" + escape(table.getName()) + "\"");
+      writer.println("    -k \"" + escape(exportedTable.keyspace.getName()) + "\" \\");
+      writer.print("    -t \"" + escape(exportedTable.table.getName()) + "\"");
     } else if (regularColumns == 1) {
       writer.print("    -query " + buildSingleImportQuery());
     } else {
@@ -190,9 +187,9 @@ public class TableScriptGenerator extends TableProcessor {
         "  elif [ $exit_status -gt " + ExitStatus.STATUS_CRASHED.exitCode() + " ]; then");
     writer.println(
         "    echo \"Table "
-            + table.getKeyspace().asCql(true).replace("\"", "\\\"")
+            + exportedTable.keyspace.getName().asCql(true).replace("\"", "\\\"")
             + "."
-            + table.getName().asCql(true).replace("\"", "\\\"")
+            + exportedTable.table.getName().asCql(true).replace("\"", "\\\"")
             + ": import failed unexpectedly, aborting migration (exit status: $exit_status).\"");
     writer.println("    exit $exit_status");
     writer.println("  else");
@@ -222,9 +219,9 @@ public class TableScriptGenerator extends TableProcessor {
   private String getOperationIdTemplate(boolean export) {
     return (export ? "EXPORT" : "IMPORT")
         + "_"
-        + table.getKeyspace().asInternal()
+        + exportedTable.keyspace.getName().asInternal()
         + "_"
-        + table.getName().asInternal()
+        + exportedTable.table.getName().asInternal()
         + "_"
         + "$(date -u +%Y%m%d_%H%M%S)";
   }

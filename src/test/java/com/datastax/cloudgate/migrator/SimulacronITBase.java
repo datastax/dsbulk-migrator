@@ -15,43 +15,23 @@
  */
 package com.datastax.cloudgate.migrator;
 
-import static com.datastax.oss.dsbulk.workflow.api.utils.PlatformUtils.isWindows;
-
-import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportClusterInfo;
-import com.datastax.cloudgate.migrator.settings.ImportSettings.ImportClusterInfo;
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.oss.driver.api.core.type.DataTypes;
-import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronExtension;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronUtils;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronUtils.Column;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronUtils.Keyspace;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronUtils.Table;
 import com.datastax.oss.dsbulk.tests.simulacron.annotations.SimulacronConfig;
-import com.datastax.oss.dsbulk.tests.utils.FileUtils;
 import com.datastax.oss.simulacron.common.cluster.QueryLog;
 import com.datastax.oss.simulacron.common.request.Query;
 import com.datastax.oss.simulacron.common.result.SuccessResult;
 import com.datastax.oss.simulacron.common.stubbing.PrimeDsl;
 import com.datastax.oss.simulacron.server.BoundCluster;
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermission;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
-import org.apache.commons.compress.archivers.ArchiveEntry;
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,7 +39,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(SimulacronExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @SimulacronConfig(dseVersion = "")
-abstract class ITBase {
+abstract class SimulacronITBase {
 
   final BoundCluster origin;
   final BoundCluster target;
@@ -67,16 +47,7 @@ abstract class ITBase {
   final String originHost;
   final String targetHost;
 
-  Path dataDir;
-  Path logsDir;
-  Path tableDir;
-  Path dsbulkDir;
-  Path exportAck;
-  Path importAck;
-  Path exportScript;
-  Path importScript;
-
-  ITBase(BoundCluster origin, BoundCluster target) {
+  SimulacronITBase(BoundCluster origin, BoundCluster target) {
     this.origin = origin;
     this.target = target;
     originHost =
@@ -87,65 +58,6 @@ abstract class ITBase {
         this.target.node(0).inetSocketAddress().getHostString()
             + ':'
             + this.target.node(0).inetSocketAddress().getPort();
-  }
-
-  @BeforeAll
-  void extractExternalDsbulk() throws IOException {
-    dsbulkDir = Files.createTempDirectory("dsbulk");
-    try (TarArchiveInputStream tar =
-        new TarArchiveInputStream(
-            new GzipCompressorInputStream(
-                new BufferedInputStream(getClass().getResourceAsStream("/dsbulk-1.7.0.tar.gz"))))) {
-      ArchiveEntry entry;
-      while ((entry = tar.getNextEntry()) != null) {
-        Path src = Paths.get(entry.getName());
-        Path dest = dsbulkDir.resolve(src);
-        if (entry.isDirectory()) {
-          if (!Files.exists(dest)) {
-            Files.createDirectory(dest);
-          }
-        } else {
-          Files.copy(tar, dest);
-          if (dest.endsWith("dsbulk") || dest.endsWith("dsbulk.cmd")) {
-            Files.setPosixFilePermissions(
-                dest,
-                Set.of(
-                    PosixFilePermission.OWNER_READ,
-                    PosixFilePermission.OWNER_EXECUTE,
-                    PosixFilePermission.GROUP_READ,
-                    PosixFilePermission.GROUP_EXECUTE));
-          }
-        }
-      }
-    }
-  }
-
-  @BeforeEach
-  void createTempDirs() throws IOException {
-    dataDir = Files.createTempDirectory("data");
-    logsDir = Files.createTempDirectory("logs");
-    tableDir = dataDir.resolve("test").resolve("t1");
-    exportAck = dataDir.resolve("__exported__").resolve("test__t1.exported");
-    importAck = dataDir.resolve("__imported__").resolve("test__t1.imported");
-    exportScript = dataDir.resolve("cloud-gate-migrator-export.sh");
-    importScript = dataDir.resolve("cloud-gate-migrator-import.sh");
-  }
-
-  @AfterEach
-  void deleteTempDirs() {
-    if (dataDir != null && Files.exists(dataDir)) {
-      FileUtils.deleteDirectory(dataDir);
-    }
-    if (logsDir != null && Files.exists(logsDir)) {
-      FileUtils.deleteDirectory(logsDir);
-    }
-  }
-
-  @AfterAll
-  void deleteDsbulkDir() {
-    if (dsbulkDir != null && Files.exists(dsbulkDir)) {
-      FileUtils.deleteDirectory(dsbulkDir);
-    }
   }
 
   @BeforeEach
@@ -188,28 +100,6 @@ abstract class ITBase {
                     Collections.emptyMap(),
                     columnTypes))
             .then(new SuccessResult(Collections.emptyList(), Collections.emptyMap())));
-  }
-
-  MigrationSettings createSettings(boolean embedded) {
-    MigrationSettings settings = new MigrationSettings();
-    settings.generalSettings.dataDir = dataDir;
-    settings.exportSettings.clusterInfo = new ExportClusterInfo();
-    settings.importSettings.clusterInfo = new ImportClusterInfo();
-    settings.exportSettings.clusterInfo.hostsAndPorts =
-        Collections.singletonList(HostAndPort.fromString(originHost));
-    settings.importSettings.clusterInfo.hostsAndPorts =
-        Collections.singletonList(HostAndPort.fromString(targetHost));
-    settings.dsBulkSettings.dsbulkEmbedded = embedded;
-    settings.dsBulkSettings.dsbulkLogDir = logsDir;
-    if (!embedded) {
-      if (isWindows()) {
-        settings.dsBulkSettings.dsbulkCmd =
-            dsbulkDir.resolve("bin").resolve("dsbulk.cmd").toString();
-      } else {
-        settings.dsBulkSettings.dsbulkCmd = dsbulkDir.resolve("bin").resolve("dsbulk").toString();
-      }
-    }
-    return settings;
   }
 
   @SuppressWarnings("deprecation")

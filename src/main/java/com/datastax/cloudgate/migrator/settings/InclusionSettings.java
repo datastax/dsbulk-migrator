@@ -13,23 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.processor;
+package com.datastax.cloudgate.migrator.settings;
 
-import com.datastax.oss.driver.api.core.CqlIdentifier;
-import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
+import com.datastax.cloudgate.migrator.model.TableType;
+import java.util.regex.Pattern;
 
-public class ExportedColumn {
+public interface InclusionSettings {
 
-  public final ColumnMetadata col;
-  public final boolean pk;
-  public final CqlIdentifier writetime;
-  public final CqlIdentifier ttl;
+  Pattern getKeyspacesPattern();
 
-  public ExportedColumn(
-      ColumnMetadata col, boolean pk, CqlIdentifier writetime, CqlIdentifier ttl) {
-    this.col = col;
-    this.pk = pk;
-    this.writetime = writetime;
-    this.ttl = ttl;
+  Pattern getTablesPattern();
+
+  default TableType getTableType() {
+    return TableType.all;
   }
 }

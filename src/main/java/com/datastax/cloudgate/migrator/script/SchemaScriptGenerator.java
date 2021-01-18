@@ -16,8 +16,7 @@
 package com.datastax.cloudgate.migrator.script;
 
 import com.datastax.cloudgate.migrator.live.ExitStatus;
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
-import com.datastax.cloudgate.migrator.utils.TableUtils;
+import com.datastax.cloudgate.migrator.utils.ModelUtils;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
@@ -33,21 +32,24 @@ public class SchemaScriptGenerator {
   private static final Logger LOGGER = LoggerFactory.getLogger(SchemaScriptGenerator.class);
 
   private final List<TableScriptGenerator> generators;
-  private final MigrationSettings settings;
+  private final ScriptGenerationSettings settings;
   private final boolean hasRegularTables;
   private final boolean hasCounterTables;
 
-  public SchemaScriptGenerator(MigrationSettings settings) {
+  public SchemaScriptGenerator(ScriptGenerationSettings settings) {
     this.settings = settings;
-    generators = new TableScriptGeneratorFactory().create(settings);
-    hasRegularTables =
-        generators.stream().anyMatch(gen -> !TableUtils.isCounterTable(gen.getTable()));
-    hasCounterTables =
-        generators.stream().anyMatch(gen -> TableUtils.isCounterTable(gen.getTable()));
+    generators =
+        ModelUtils.buildExportedTables(
+                settings.exportSettings.clusterInfo, settings.exportSettings.credentials, settings)
+            .stream()
+            .map(exportedTable -> new TableScriptGenerator(exportedTable, settings))
+            .collect(Collectors.toList());
+    hasRegularTables = generators.stream().anyMatch(gen -> !gen.getExportedTable().counterTable);
+    hasCounterTables = generators.stream().anyMatch(gen -> gen.getExportedTable().counterTable);
   }
 
   public ExitStatus generate() throws IOException {
-    Path exportDir = settings.generalSettings.dataDir;
+    Path exportDir = settings.dataDir;
     Files.createDirectories(exportDir);
     Path exportScript = exportDir.resolve("cloud-gate-migrator-export.sh");
     Path importScript = exportDir.resolve("cloud-gate-migrator-import.sh");
@@ -59,7 +61,7 @@ public class SchemaScriptGenerator {
         printExportScriptHeader(exportWriter);
         printImportScriptHeader(importWriter, false);
         for (TableScriptGenerator generator : generators) {
-          if (!TableUtils.isCounterTable(generator.getTable())) {
+          if (!generator.getExportedTable().counterTable) {
             generator.printExportScript(exportWriter);
             generator.printImportScript(importWriter);
           }
@@ -78,7 +80,7 @@ public class SchemaScriptGenerator {
         printExportScriptHeader(exportWriter);
         printImportScriptHeader(importWriter, true);
         for (TableScriptGenerator generator : generators) {
-          if (TableUtils.isCounterTable(generator.getTable())) {
+          if (generator.getExportedTable().counterTable) {
             generator.printExportScript(exportWriter);
             generator.printImportScript(importWriter);
           }
@@ -131,12 +133,9 @@ public class SchemaScriptGenerator {
                 ? String.valueOf(settings.exportSettings.credentials.password)
                 : "")
             + "}\"");
-    writer.println(
-        "dsbulk_cmd=\"${MIGRATOR_EXPORT_CMD:-" + settings.dsBulkSettings.dsbulkCmd + "}\"");
-    writer.println(
-        "dsbulk_logs=\"${MIGRATOR_EXPORT_LOG_DIR:-" + settings.dsBulkSettings.dsbulkLogDir + "}\"");
-    writer.println(
-        "data_dir=\"${MIGRATOR_EXPORT_DATA_DIR:-" + settings.generalSettings.dataDir + "}\"");
+    writer.println("dsbulk_cmd=\"${MIGRATOR_EXPORT_CMD:-" + settings.dsbulkCmd + "}\"");
+    writer.println("dsbulk_logs=\"${MIGRATOR_EXPORT_LOG_DIR:-" + settings.dsbulkLogDir + "}\"");
+    writer.println("data_dir=\"${MIGRATOR_EXPORT_DATA_DIR:-" + settings.dataDir + "}\"");
     writer.println(
         "max_records=\"${MIGRATOR_EXPORT_MAX_RECORDS:-"
             + settings.exportSettings.maxRecords
@@ -192,12 +191,9 @@ public class SchemaScriptGenerator {
                 ? String.valueOf(settings.importSettings.credentials.password)
                 : "")
             + "}\"");
-    writer.println(
-        "dsbulk_cmd=\"${MIGRATOR_IMPORT_CMD:-" + settings.dsBulkSettings.dsbulkCmd + "}\"");
-    writer.println(
-        "dsbulk_logs=\"${MIGRATOR_IMPORT_LOG_DIR:-" + settings.dsBulkSettings.dsbulkLogDir + "}\"");
-    writer.println(
-        "data_dir=\"${MIGRATOR_IMPORT_DATA_DIR:-" + settings.generalSettings.dataDir + "}\"");
+    writer.println("dsbulk_cmd=\"${MIGRATOR_IMPORT_CMD:-" + settings.dsbulkCmd + "}\"");
+    writer.println("dsbulk_logs=\"${MIGRATOR_IMPORT_LOG_DIR:-" + settings.dsbulkLogDir + "}\"");
+    writer.println("data_dir=\"${MIGRATOR_IMPORT_DATA_DIR:-" + settings.dataDir + "}\"");
     writer.println(
         "max_concurrent_files=\"${MIGRATOR_IMPORT_MAX_CONCURRENT_FILES:-"
             + settings.importSettings.maxConcurrentFiles

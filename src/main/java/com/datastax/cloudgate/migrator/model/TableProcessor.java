@@ -13,36 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.processor;
+package com.datastax.cloudgate.migrator.model;
 
-import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
-import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.datastax.oss.protocol.internal.ProtocolConstants;
 import java.util.Iterator;
-import java.util.List;
 
 public abstract class TableProcessor {
 
-  protected final TableMetadata table;
-  protected final MigrationSettings settings;
-  protected final List<ExportedColumn> exportedColumns;
+  protected final ExportedTable exportedTable;
 
-  public TableProcessor(
-      TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
-    this.table = table;
-    this.settings = settings;
-    this.exportedColumns = exportedColumns;
+  public TableProcessor(ExportedTable exportedTable) {
+    this.exportedTable = exportedTable;
   }
 
-  public TableMetadata getTable() {
-    return table;
+  public ExportedTable getExportedTable() {
+    return exportedTable;
   }
 
   protected String buildExportQuery() {
     StringBuilder builder = new StringBuilder("\"SELECT ");
-    Iterator<ExportedColumn> cols = exportedColumns.iterator();
+    Iterator<ExportedColumn> cols = exportedTable.columns.iterator();
     while (cols.hasNext()) {
       ExportedColumn exportedColumn = cols.next();
       String name = escape(exportedColumn.col.getName());
@@ -64,22 +56,22 @@ public abstract class TableProcessor {
       }
     }
     builder.append(" FROM ");
-    builder.append(escape(table.getKeyspace()));
+    builder.append(escape(exportedTable.keyspace.getName()));
     builder.append(".");
-    builder.append(escape(table.getName()));
+    builder.append(escape(exportedTable.table.getName()));
     builder.append("\"");
     return builder.toString();
   }
 
   protected String buildSingleImportQuery() {
     StringBuilder builder = new StringBuilder("\"INSERT INTO ");
-    builder.append(escape(table.getKeyspace()));
+    builder.append(escape(exportedTable.keyspace.getName()));
     builder.append(".");
-    builder.append(escape(table.getName()));
+    builder.append(escape(exportedTable.table.getName()));
     builder.append(" (");
     CqlIdentifier singleWritetime = null;
     CqlIdentifier singleTtl = null;
-    Iterator<ExportedColumn> cols = exportedColumns.iterator();
+    Iterator<ExportedColumn> cols = exportedTable.columns.iterator();
     while (cols.hasNext()) {
       ExportedColumn exportedColumn = cols.next();
       if (exportedColumn.writetime != null) {
@@ -97,7 +89,7 @@ public abstract class TableProcessor {
       }
     }
     builder.append(") VALUES (");
-    cols = exportedColumns.iterator();
+    cols = exportedTable.columns.iterator();
     while (cols.hasNext()) {
       ExportedColumn exportedColumn = cols.next();
       if (exportedColumn.writetime != null) {
@@ -130,21 +122,22 @@ public abstract class TableProcessor {
 
   protected String buildBatchImportQuery() {
     StringBuilder builder = new StringBuilder("\"BEGIN UNLOGGED BATCH ");
-    Iterator<ExportedColumn> cols = exportedColumns.stream().filter(col -> !col.pk).iterator();
+    Iterator<ExportedColumn> cols =
+        exportedTable.columns.stream().filter(col -> !col.pk).iterator();
     while (cols.hasNext()) {
       ExportedColumn exportedColumn = cols.next();
       builder.append("INSERT INTO ");
-      builder.append(escape(table.getKeyspace()));
+      builder.append(escape(exportedTable.keyspace.getName()));
       builder.append(".");
-      builder.append(escape(table.getName()));
+      builder.append(escape(exportedTable.table.getName()));
       builder.append(" (");
-      for (ColumnMetadata pk : table.getPrimaryKey()) {
+      for (ColumnMetadata pk : exportedTable.table.getPrimaryKey()) {
         builder.append(escape(pk.getName()));
         builder.append(", ");
       }
       builder.append(escape(exportedColumn.col.getName()));
       builder.append(") VALUES (");
-      for (ColumnMetadata pk : table.getPrimaryKey()) {
+      for (ColumnMetadata pk : exportedTable.table.getPrimaryKey()) {
         builder.append(":");
         builder.append(escape(pk.getName()));
         builder.append(", ");
@@ -170,7 +163,7 @@ public abstract class TableProcessor {
 
   protected String buildImportMapping() {
     StringBuilder builder = new StringBuilder("\"");
-    Iterator<ExportedColumn> cols = exportedColumns.iterator();
+    Iterator<ExportedColumn> cols = exportedTable.columns.iterator();
     while (cols.hasNext()) {
       ExportedColumn exportedColumn = cols.next();
       builder.append(escape(exportedColumn.col.getName()));
@@ -192,7 +185,7 @@ public abstract class TableProcessor {
 
   protected int countRegularColumns() {
     int regularCols = 0;
-    for (ExportedColumn exportedColumn : exportedColumns) {
+    for (ExportedColumn exportedColumn : exportedTable.columns) {
       if (!exportedColumn.pk
           && !(exportedColumn.col.getType().getProtocolCode()
               == ProtocolConstants.DataType.COUNTER)) {

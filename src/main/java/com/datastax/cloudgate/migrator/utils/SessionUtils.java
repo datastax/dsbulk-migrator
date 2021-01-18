@@ -17,8 +17,6 @@ package com.datastax.cloudgate.migrator.utils;
 
 import com.datastax.cloudgate.migrator.settings.ClusterInfo;
 import com.datastax.cloudgate.migrator.settings.Credentials;
-import com.datastax.cloudgate.migrator.settings.ExportSettings;
-import com.datastax.cloudgate.migrator.settings.ImportSettings;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
@@ -33,33 +31,20 @@ public class SessionUtils {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SessionUtils.class);
 
-  public static CqlSession createExportSession(ExportSettings exportSettings) {
+  public static CqlSession createSession(ClusterInfo clusterInfo, Credentials credentials) {
+    String clusterName = clusterInfo.isOrigin() ? "origin" : "target";
     try {
-      LOGGER.info("Contacting origin cluster...");
-      CqlSession session = createSession(exportSettings.clusterInfo, exportSettings.credentials);
-      LOGGER.info("Origin cluster successfully contacted");
+      LOGGER.info("Contacting {} cluster...", clusterName);
+      CqlSession session = createSessionBuilder(clusterInfo, credentials).build();
+      LOGGER.info("Successfully contacted {} cluster", clusterName);
       return session;
     } catch (Exception e) {
-      throw new IllegalStateException(
-          "Could not reach origin cluster; please check your --export-host or --export-bundle values",
-          e);
+      throw new IllegalStateException("Could not contact " + clusterName + " cluster", e);
     }
   }
 
-  public static CqlSession createImportSession(ImportSettings importSettings) {
-    try {
-      LOGGER.info("Contacting target cluster...");
-      CqlSession session = createSession(importSettings.clusterInfo, importSettings.credentials);
-      LOGGER.info("Target cluster successfully contacted");
-      return session;
-    } catch (Exception e) {
-      throw new IllegalStateException(
-          "Could not reach target cluster; please check your --import-host or --import-bundle values",
-          e);
-    }
-  }
-
-  private static CqlSession createSession(ClusterInfo clusterInfo, Credentials credentials) {
+  private static CqlSessionBuilder createSessionBuilder(
+      ClusterInfo clusterInfo, Credentials credentials) {
     DriverConfigLoader loader =
         DriverConfigLoader.programmaticBuilder()
             .withString(
@@ -82,6 +67,6 @@ public class SessionUtils {
       builder.withAuthCredentials(
           credentials.getUsername(), String.valueOf(credentials.getPassword()));
     }
-    return builder.build();
+    return builder;
   }
 }

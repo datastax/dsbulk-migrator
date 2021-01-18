@@ -13,10 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.datastax.cloudgate.migrator.settings;
+package com.datastax.cloudgate.migrator.model;
 
-public enum TableType {
-  regular,
-  counter,
-  all
+import com.datastax.oss.driver.api.core.CqlIdentifier;
+import com.datastax.oss.driver.api.core.metadata.schema.ColumnMetadata;
+
+public class ExportedColumn {
+
+  public final ColumnMetadata col;
+  public final boolean pk;
+  public final CqlIdentifier writetime;
+  public final CqlIdentifier ttl;
+
+  public ExportedColumn(
+      ColumnMetadata col, boolean pk, CqlIdentifier writetime, CqlIdentifier ttl) {
+    this.col = col;
+    this.pk = pk;
+    this.writetime = writetime;
+    this.ttl = ttl;
+  }
 }

@@ -58,6 +58,11 @@ public class ImportSettings {
     public Path bundle;
 
     @Override
+    public boolean isOrigin() {
+      return false;
+    }
+
+    @Override
     public List<InetSocketAddress> getContactPoints() {
       if (hostsAndPorts == null || hostsAndPorts.isEmpty()) {
         return Collections.emptyList();
