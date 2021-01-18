@@ -19,7 +19,14 @@ import com.datastax.cloudgate.migrator.processor.ExportedColumn;
 import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.cloudgate.migrator.utils.TableUtils;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,26 +48,53 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
       if (settings.dsBulkSettings.dsbulkWorkingDir != null) {
         builder.directory(settings.dsBulkSettings.dsbulkWorkingDir.toFile());
       }
-      builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
-      builder.redirectError(ProcessBuilder.Redirect.DISCARD);
       Process process = builder.start();
       LOGGER.debug(
           "Table {}: process started (PID {})",
           TableUtils.getFullyQualifiedTableName(table),
           process.pid());
-      int exitCode = process.waitFor();
+      ExecutorService pool = Executors.newFixedThreadPool(2);
+      ExitStatus status;
+      try {
+        pool.submit(new StreamPiper(process.getInputStream(), System.out::println));
+        pool.submit(new StreamPiper(process.getErrorStream(), System.err::println));
+        int exitCode = process.waitFor();
+        status = ExitStatus.forCode(exitCode);
+      } finally {
+        pool.shutdown();
+        if (!pool.awaitTermination(5, TimeUnit.SECONDS)) {
+          LOGGER.error("Timed out waiting for process streams to close");
+        }
+        pool.shutdownNow();
+      }
       LOGGER.debug(
           "Table {}: process finished (PID {}, exit code {})",
           TableUtils.getFullyQualifiedTableName(table),
           process.pid(),
-          exitCode);
-      return ExitStatus.forCode(exitCode);
+          status);
+      return status;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       return ExitStatus.STATUS_INTERRUPTED;
     } catch (Exception e) {
       LOGGER.error("DSBulk invocation failed: {}", e.getMessage());
       return ExitStatus.STATUS_CRASHED;
+    }
+  }
+
+  private static class StreamPiper implements Runnable {
+
+    private final InputStream inputStream;
+    private final Consumer<String> consumer;
+
+    StreamPiper(InputStream inputStream, Consumer<String> consumer) {
+      this.inputStream = inputStream;
+      this.consumer = consumer;
+    }
+
+    @Override
+    public void run() {
+      new BufferedReader(new InputStreamReader(inputStream)).lines().forEach(consumer);
     }
   }
 }

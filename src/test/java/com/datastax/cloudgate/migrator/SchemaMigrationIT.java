@@ -24,7 +24,10 @@ import com.datastax.cloudgate.migrator.settings.MigrationSettings;
 import com.datastax.oss.simulacron.common.cluster.QueryLog;
 import com.datastax.oss.simulacron.server.BoundCluster;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Paths;
 import java.util.List;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 public class SchemaMigrationIT extends ITBase {
@@ -67,5 +70,14 @@ public class SchemaMigrationIT extends ITBase {
             "1,1,1,1970-01-01T00:00:00.012456Z,", "1,2,2,1970-01-01T00:00:00.234567Z,100");
     List<QueryLog> insertions = countInsertions();
     assertThat(insertions.size()).isEqualTo(2);
+  }
+
+  @BeforeAll
+  void setLogConfigurationFile() throws URISyntaxException {
+    // required because the embedded mode resets the logging configuration after
+    // each DSBulk invocation.
+    System.setProperty(
+        "logback. configurationFile",
+        Paths.get(getClass().getResource("/logback-test.xml").toURI()).toString());
   }
 }

@@ -17,21 +17,38 @@ package com.datastax.cloudgate.migrator.utils;
 
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
-import ch.qos.logback.core.joran.spi.JoranException;
-import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.file.Paths;
+import java.util.Objects;
 import org.slf4j.LoggerFactory;
 
 public class LoggingUtils {
 
-  public static void configureLogging(URL configurationFile) throws IOException, JoranException {
+  public static final URL MIGRATOR_CONFIGURATION_FILE;
+
+  static {
+    try {
+      MIGRATOR_CONFIGURATION_FILE =
+          Objects.requireNonNull(
+              System.getProperty("logback. configurationFile") == null
+                  ? ClassLoader.getSystemResource("logback-migrator.xml")
+                  : Paths.get(System.getProperty("logback. configurationFile")).toUri().toURL());
+    } catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static void configureLogging(URL configurationFile) {
     LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
     loggerContext.reset();
     JoranConfigurator configurator = new JoranConfigurator();
     try (InputStream configStream = configurationFile.openStream()) {
       configurator.setContext(loggerContext);
       configurator.doConfigure(configStream);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to configure logging", e);
     }
   }
 }

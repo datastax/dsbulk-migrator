@@ -49,7 +49,7 @@ public class CloudGateMigrator {
   boolean versionInfoRequested;
 
   public static void main(String[] args) throws Exception {
-    LoggingUtils.configureLogging(SchemaLiveMigrator.class.getResource("/logback-migrator.xml"));
+    LoggingUtils.configureLogging(LoggingUtils.MIGRATOR_CONFIGURATION_FILE);
     CommandLine commandLine = new CommandLine(new CloudGateMigrator());
     int exitCode = commandLine.execute(args);
     System.exit(exitCode);

@@ -250,8 +250,6 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("0");
     args.add("-header");
     args.add("false");
-    args.add("-verbosity");
-    args.add("0");
     args.add("--engine.executionId");
     args.add(operationId);
     args.add("-logDir");
@@ -294,8 +292,6 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add(String.valueOf(settings.importSettings.maxErrors));
     args.add("-header");
     args.add("false");
-    args.add("-verbosity");
-    args.add("0");
     args.add("--engine.executionId");
     args.add(operationId);
     args.add("-logDir");

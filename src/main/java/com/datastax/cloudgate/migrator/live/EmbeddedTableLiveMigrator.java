@@ -17,11 +17,17 @@ package com.datastax.cloudgate.migrator.live;
 
 import com.datastax.cloudgate.migrator.processor.ExportedColumn;
 import com.datastax.cloudgate.migrator.settings.MigrationSettings;
+import com.datastax.cloudgate.migrator.utils.LoggingUtils;
 import com.datastax.oss.driver.api.core.metadata.schema.TableMetadata;
 import com.datastax.oss.dsbulk.runner.DataStaxBulkLoader;
+import java.net.URL;
 import java.util.List;
+import java.util.Objects;
 
 public class EmbeddedTableLiveMigrator extends TableLiveMigrator {
+
+  private static final URL DSBULK_CONFIGURATION_FILE =
+      Objects.requireNonNull(ClassLoader.getSystemResource("logback.xml"));
 
   public EmbeddedTableLiveMigrator(
       TableMetadata table, MigrationSettings settings, List<ExportedColumn> exportedColumns) {
@@ -31,6 +37,13 @@ public class EmbeddedTableLiveMigrator extends TableLiveMigrator {
   @Override
   protected ExitStatus invokeDsbulk(List<String> args) {
     DataStaxBulkLoader loader = new DataStaxBulkLoader(args.toArray(new String[0]));
-    return ExitStatus.forCode(loader.run().exitCode());
+    int exitCode;
+    LoggingUtils.configureLogging(DSBULK_CONFIGURATION_FILE);
+    try {
+      exitCode = loader.run().exitCode();
+    } finally {
+      LoggingUtils.configureLogging(LoggingUtils.MIGRATOR_CONFIGURATION_FILE);
+    }
+    return ExitStatus.forCode(exitCode);
   }
 }

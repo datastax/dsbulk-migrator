@@ -20,7 +20,6 @@ import static com.datastax.oss.dsbulk.workflow.api.utils.PlatformUtils.isWindows
 import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportClusterInfo;
 import com.datastax.cloudgate.migrator.settings.ImportSettings.ImportClusterInfo;
 import com.datastax.cloudgate.migrator.settings.MigrationSettings;
-import com.datastax.cloudgate.migrator.utils.LoggingUtils;
 import com.datastax.oss.driver.api.core.type.DataTypes;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
 import com.datastax.oss.dsbulk.tests.simulacron.SimulacronExtension;
@@ -119,11 +118,6 @@ abstract class ITBase {
         }
       }
     }
-  }
-
-  @BeforeEach
-  void resetLogging() throws Exception {
-    LoggingUtils.configureLogging(getClass().getResource("/logback-test.xml"));
   }
 
   @BeforeEach
