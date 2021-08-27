@@ -28,6 +28,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -110,9 +112,7 @@ class DdlGenerationIT extends SimulacronITBase {
     settings.dataDir = dataDir;
     settings.clusterInfo = new ExportClusterInfo();
     settings.clusterInfo.hostsAndPorts =
-        Collections.singletonList(HostAndPort.fromString(originHost));
-    settings.clusterInfo.hostsAndPorts =
-        Collections.singletonList(HostAndPort.fromString(targetHost));
+            originHosts.stream().map(h -> HostAndPort.fromString(h)).collect(Collectors.toList());
     return settings;
   }
 }

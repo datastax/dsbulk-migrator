@@ -38,6 +38,8 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
@@ -133,9 +135,9 @@ class LiveMigrationIT extends SimulacronITBase {
     settings.exportSettings.clusterInfo = new ExportClusterInfo();
     settings.importSettings.clusterInfo = new ImportClusterInfo();
     settings.exportSettings.clusterInfo.hostsAndPorts =
-        Collections.singletonList(HostAndPort.fromString(originHost));
+            originHosts.stream().map(h -> HostAndPort.fromString(h)).collect(Collectors.toList());
     settings.importSettings.clusterInfo.hostsAndPorts =
-        Collections.singletonList(HostAndPort.fromString(targetHost));
+            targetHosts.stream().map(h -> HostAndPort.fromString(h)).collect(Collectors.toList());
     settings.dsbulkEmbedded = embedded;
     settings.dsbulkLogDir = logsDir;
     if (!embedded) {
@@ -156,6 +158,9 @@ class LiveMigrationIT extends SimulacronITBase {
                 new BufferedInputStream(getClass().getResourceAsStream("/dsbulk-1.7.0.tar.gz"))))) {
       ArchiveEntry entry;
       while ((entry = tar.getNextEntry()) != null) {
+        if (entry.getName().startsWith("._")) {
+          continue;
+        }
         Path src = Paths.get(entry.getName());
         Path dest = dsbulkDir.resolve(src);
         if (entry.isDirectory()) {
@@ -165,13 +170,15 @@ class LiveMigrationIT extends SimulacronITBase {
         } else {
           Files.copy(tar, dest);
           if (dest.endsWith("dsbulk") || dest.endsWith("dsbulk.cmd")) {
-            Files.setPosixFilePermissions(
-                dest,
-                Set.of(
-                    PosixFilePermission.OWNER_READ,
-                    PosixFilePermission.OWNER_EXECUTE,
-                    PosixFilePermission.GROUP_READ,
-                    PosixFilePermission.GROUP_EXECUTE));
+            if (!isWindows()) {
+              Files.setPosixFilePermissions(
+                  dest,
+                  Set.of(
+                      PosixFilePermission.OWNER_READ,
+                      PosixFilePermission.OWNER_EXECUTE,
+                      PosixFilePermission.GROUP_READ,
+                      PosixFilePermission.GROUP_EXECUTE));
+            }
           }
         }
       }

@@ -15,6 +15,8 @@
  */
 package com.datastax.cloudgate.migrator.live;
 
+import static com.datastax.oss.dsbulk.workflow.api.utils.PlatformUtils.isWindows;
+
 import com.datastax.cloudgate.migrator.model.ExportedTable;
 import com.datastax.cloudgate.migrator.model.TableProcessor;
 import com.datastax.cloudgate.migrator.utils.SessionUtils;
@@ -221,14 +223,22 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("unload");
     if (settings.exportSettings.clusterInfo.bundle != null) {
       args.add("-b");
-      args.add(String.valueOf(settings.exportSettings.clusterInfo.bundle));
+      args.add(String.valueOf(settings.exportSettings.clusterInfo.bundle).replace("\\", "\\\\"));
     } else {
       args.add("-h");
-      String hosts =
-          settings.exportSettings.clusterInfo.hostsAndPorts.stream()
-              .map(hp -> "\"" + hp + "\"")
-              .collect(Collectors.joining(","));
-      args.add("[" + hosts + "]");
+      if (isWindows() && !settings.dsbulkEmbedded) {
+        String hosts =
+                settings.exportSettings.clusterInfo.hostsAndPorts.stream()
+                        .map(hp -> "\\\"" + hp + "\\\"")
+                        .collect(Collectors.joining(","));
+        args.add("\"[" + hosts + "]\"");
+      } else {
+        String hosts =
+                settings.exportSettings.clusterInfo.hostsAndPorts.stream()
+                        .map(hp -> "\"" + hp + "\"")
+                        .collect(Collectors.joining(","));
+        args.add("[" + hosts + "]");
+      }
     }
     if (settings.exportSettings.credentials != null) {
       args.add("-u");
@@ -237,7 +247,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add(String.valueOf(settings.exportSettings.credentials.password));
     }
     args.add("-url");
-    args.add(String.valueOf(tableDataDir));
+    args.add(String.valueOf(tableDataDir).replace("\\", "\\\\"));
     args.add("-maxRecords");
     args.add(String.valueOf(settings.exportSettings.maxRecords));
     args.add("-maxConcurrentFiles");
@@ -255,7 +265,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("--engine.executionId");
     args.add(operationId);
     args.add("-logDir");
-    args.add(String.valueOf(settings.dsbulkLogDir));
+    args.add(String.valueOf(settings.dsbulkLogDir).replace("\\", "\\\\"));
     args.add("-query");
     args.add(buildExportQuery());
     args.addAll(settings.exportSettings.extraDsbulkOptions);
@@ -267,14 +277,22 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("load");
     if (settings.importSettings.clusterInfo.bundle != null) {
       args.add("-b");
-      args.add(String.valueOf(settings.importSettings.clusterInfo.bundle));
+      args.add(String.valueOf(settings.importSettings.clusterInfo.bundle).replace("\\", "\\\\"));
     } else {
       args.add("-h");
-      String hosts =
-          settings.importSettings.clusterInfo.hostsAndPorts.stream()
-              .map(hp -> "\"" + hp + "\"")
-              .collect(Collectors.joining(","));
-      args.add("[" + hosts + "]");
+      if (isWindows() && !settings.dsbulkEmbedded) {
+        String hosts =
+                settings.importSettings.clusterInfo.hostsAndPorts.stream()
+                        .map(hp -> "\\\"" + hp + "\\\"")
+                        .collect(Collectors.joining(","));
+        args.add("\"[" + hosts + "]\"");
+      } else {
+        String hosts =
+                settings.importSettings.clusterInfo.hostsAndPorts.stream()
+                        .map(hp -> "\"" + hp + "\"")
+                        .collect(Collectors.joining(","));
+        args.add("[" + hosts + "]");
+      }
     }
     if (settings.importSettings.credentials != null) {
       args.add("-u");
@@ -283,7 +301,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add(String.valueOf(settings.importSettings.credentials.password));
     }
     args.add("-url");
-    args.add(String.valueOf(tableDataDir));
+    args.add(String.valueOf(tableDataDir).replace("\\", "\\\\"));
     args.add("-maxConcurrentFiles");
     args.add(settings.importSettings.maxConcurrentFiles);
     args.add("-maxConcurrentQueries");
@@ -297,7 +315,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add("--engine.executionId");
     args.add(operationId);
     args.add("-logDir");
-    args.add(String.valueOf(settings.dsbulkLogDir));
+    args.add(String.valueOf(settings.dsbulkLogDir).replace("\\", "\\\\"));
     args.add("-m");
     args.add(buildImportMapping());
     int regularColumns = countRegularColumns();

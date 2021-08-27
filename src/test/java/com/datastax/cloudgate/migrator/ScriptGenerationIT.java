@@ -29,6 +29,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.stream.Collectors;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,9 +93,9 @@ class ScriptGenerationIT extends SimulacronITBase {
     settings.exportSettings.clusterInfo = new ExportClusterInfo();
     settings.importSettings.clusterInfo = new ImportClusterInfo();
     settings.exportSettings.clusterInfo.hostsAndPorts =
-        Collections.singletonList(HostAndPort.fromString(originHost));
+            originHosts.stream().map(h -> HostAndPort.fromString(h)).collect(Collectors.toList());
     settings.importSettings.clusterInfo.hostsAndPorts =
-        Collections.singletonList(HostAndPort.fromString(targetHost));
+            targetHosts.stream().map(h -> HostAndPort.fromString(h)).collect(Collectors.toList());
     settings.dsbulkLogDir = logsDir;
     return settings;
   }

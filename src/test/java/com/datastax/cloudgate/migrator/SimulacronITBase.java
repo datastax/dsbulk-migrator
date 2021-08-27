@@ -38,26 +38,26 @@ import org.junit.jupiter.api.extension.ExtendWith;
 
 @ExtendWith(SimulacronExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@SimulacronConfig(dseVersion = "")
+@SimulacronConfig(dseVersion = "", numberOfNodes = 3)
 abstract class SimulacronITBase {
 
   final BoundCluster origin;
   final BoundCluster target;
 
-  final String originHost;
-  final String targetHost;
+  final List<String> originHosts;
+  final List<String> targetHosts;
 
   SimulacronITBase(BoundCluster origin, BoundCluster target) {
     this.origin = origin;
     this.target = target;
-    originHost =
-        this.origin.node(0).inetSocketAddress().getHostString()
-            + ':'
-            + this.origin.node(0).inetSocketAddress().getPort();
-    targetHost =
-        this.target.node(0).inetSocketAddress().getHostString()
-            + ':'
-            + this.target.node(0).inetSocketAddress().getPort();
+    originHosts =
+            this.origin.getNodes().stream()
+                    .map(n -> n.inetSocketAddress().getHostString() + ":" + n.inetSocketAddress().getPort())
+                    .collect(Collectors.toList());
+    targetHosts =
+            this.target.getNodes().stream()
+                    .map(n -> n.inetSocketAddress().getHostString() + ":" + n.inetSocketAddress().getPort())
+                    .collect(Collectors.toList());
   }
 
   @BeforeEach
