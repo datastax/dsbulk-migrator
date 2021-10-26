@@ -19,6 +19,8 @@ import com.datastax.cloudgate.migrator.model.ExportedTable;
 import com.datastax.cloudgate.migrator.model.TableProcessor;
 import com.datastax.cloudgate.migrator.utils.SessionUtils;
 import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.dsbulk.io.CompressedIOUtils;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -203,10 +205,28 @@ public abstract class TableLiveMigrator extends TableProcessor {
 
   private boolean hasExportedData() {
     if (isExported()) {
+      String compression = null;
+      boolean compressionUsed = false;
+      if (!settings.exportSettings.extraDsbulkOptions.isEmpty()) {
+    	for (String s : settings.exportSettings.extraDsbulkOptions) {
+    	  if (s.contains(".compression")) {
+    	    compressionUsed = true;
+    	    compression = s.substring(1 + s.indexOf("="));
+    	    break;
+    	  }
+    	}
+      }
       try (DirectoryStream<Path> stream = Files.newDirectoryStream(tableDataDir)) {
         for (Path entry : stream) {
           String fileName = entry.getFileName().toString();
           if (fileName.startsWith("output")) {
+            if (compressionUsed) {
+              if(!fileName.endsWith(CompressedIOUtils.getCompressionSuffix(compression))) {
+        	LOGGER.warn("Passed in compression is {}, but found file(s) with different suffix."
+        		+ " For e.g. {}. Aborting export.", compression, fileName);
+        	return false;
+              }
+            }
             return true;
           }
         }
