@@ -115,7 +115,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
           "Cannot import non-exported table: " + exportedTable.fullyQualifiedName);
     } else if (!hasExportedData()) {
       LOGGER.warn(
-          "Table {}.{}: export did not create any CSV file, skipping import. Is the table empty?",
+          "Table {}.{}: export did not create any output file(s), skipping import. Is the table empty?",
           exportedTable.keyspace.getName(),
           exportedTable.table.getName());
       operationId = createOperationId(false);
@@ -206,7 +206,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
       try (DirectoryStream<Path> stream = Files.newDirectoryStream(tableDataDir)) {
         for (Path entry : stream) {
           String fileName = entry.getFileName().toString();
-          if (fileName.startsWith("output") && fileName.endsWith(".csv")) {
+          if (fileName.startsWith("output")) {
             return true;
           }
         }
