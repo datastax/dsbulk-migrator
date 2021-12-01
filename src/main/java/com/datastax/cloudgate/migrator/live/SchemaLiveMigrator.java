@@ -68,7 +68,7 @@ public class SchemaLiveMigrator {
         ModelUtils.buildExportedTables(
                 settings.exportSettings.clusterInfo,
                 settings.exportSettings.credentials,
-                settings.exportSettings.getSslContext(),
+                settings.exportSettings.tlsSettings,
                 settings)
             .stream()
             .map(
@@ -145,7 +145,7 @@ public class SchemaLiveMigrator {
         SessionUtils.createSession(
             settings.importSettings.clusterInfo,
             settings.importSettings.credentials,
-            settings.importSettings.getSslContext())) {}
+            settings.importSettings.tlsSettings)) {}
   }
 
   private void migrateTables(Predicate<TableLiveMigrator> filter) {

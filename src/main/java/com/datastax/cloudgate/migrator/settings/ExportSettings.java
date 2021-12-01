@@ -18,6 +18,7 @@ package com.datastax.cloudgate.migrator.settings;
 import com.datastax.cloudgate.migrator.utils.SslUtils;
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
+
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -119,7 +120,44 @@ public class ExportSettings {
   }
 
   @ArgGroup(exclusive = false)
-  public ExportKeystoreSettings keystoreSettings;
+  public ExportTlsSettings tlsSettings;
+
+  public static class ExportTlsSettings implements TlsSettings {
+    @ArgGroup(exclusive = false)
+    public ExportKeystoreSettings keystoreSettings;
+    @ArgGroup(exclusive = false)
+    public ExportTruststoreSettings truststoreSettings;
+
+    @Option(
+        names = "--export-tls-hostname-validation",
+        description =
+                "Whether hostname validation should be performed when connecting to the origin cluster. Only relevant when connecting to a cluster requiring TLS.",
+        defaultValue = "false")
+    public boolean hostnameValidation = false;
+
+    @Option(
+        names = "--export-tls-cipher-suites",
+        description =
+                "Cipher suites to be used when connecting to the origin cluster. Only relevant when connecting to a cluster requiring TLS.")
+    public String[] cipherSuites;
+
+    public SSLContext getSslContext() throws IllegalStateException {
+      return truststoreSettings != null
+              ? SslUtils.createSslContext(keystoreSettings, truststoreSettings)
+              : null;
+    }
+
+    @Override
+    public boolean performHostnameValidation() {
+      return hostnameValidation;
+    }
+
+    @Override
+    public String[] getCipherSuites() {
+      return cipherSuites;
+    }
+
+  }
 
   public static class ExportKeystoreSettings implements SslStore {
 
@@ -155,9 +193,6 @@ public class ExportSettings {
     }
   }
 
-  @ArgGroup(exclusive = false)
-  public ExportTruststoreSettings truststoreSettings;
-
   public static class ExportTruststoreSettings implements SslStore {
 
     @Option(
@@ -192,11 +227,7 @@ public class ExportSettings {
     }
   }
 
-  public SSLContext getSslContext() throws IllegalStateException {
-    return truststoreSettings != null
-        ? SslUtils.createSslContext(keystoreSettings, truststoreSettings)
-        : null;
-  }
+
 
   @Option(
       names = "--export-consistency",

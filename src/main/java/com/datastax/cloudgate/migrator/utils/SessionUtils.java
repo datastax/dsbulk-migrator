@@ -17,6 +17,7 @@ package com.datastax.cloudgate.migrator.utils;
 
 import com.datastax.cloudgate.migrator.settings.ClusterInfo;
 import com.datastax.cloudgate.migrator.settings.Credentials;
+import com.datastax.cloudgate.migrator.settings.TlsSettings;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
@@ -27,6 +28,8 @@ import java.net.SocketAddress;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import javax.net.ssl.SSLContext;
+
+import com.datastax.oss.driver.api.core.ssl.ProgrammaticSslEngineFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,11 +38,11 @@ public class SessionUtils {
   private static final Logger LOGGER = LoggerFactory.getLogger(SessionUtils.class);
 
   public static CqlSession createSession(
-      ClusterInfo clusterInfo, Credentials credentials, SSLContext sslContext) {
+      ClusterInfo clusterInfo, Credentials credentials, TlsSettings tlsSettings) {
     String clusterName = clusterInfo.isOrigin() ? "origin" : "target";
     try {
       LOGGER.info("Contacting {} cluster...", clusterName);
-      CqlSession session = createSessionBuilder(clusterInfo, credentials, sslContext).build();
+      CqlSession session = createSessionBuilder(clusterInfo, credentials, tlsSettings).build();
       LOGGER.info("Successfully contacted {} cluster", clusterName);
       return session;
     } catch (Exception e) {
@@ -48,7 +51,7 @@ public class SessionUtils {
   }
 
   private static CqlSessionBuilder createSessionBuilder(
-      ClusterInfo clusterInfo, Credentials credentials, SSLContext sslContext)
+      ClusterInfo clusterInfo, Credentials credentials, TlsSettings tlsSettings)
       throws GeneralSecurityException, IOException {
     DriverConfigLoader loader =
         DriverConfigLoader.programmaticBuilder()
@@ -72,8 +75,8 @@ public class SessionUtils {
       builder.withAuthCredentials(
           credentials.getUsername(), String.valueOf(credentials.getPassword()));
     }
-    if (sslContext != null) {
-      builder.withSslContext(sslContext);
+    if (tlsSettings != null) {
+      builder.withSslEngineFactory(new ProgrammaticSslEngineFactory(tlsSettings.getSslContext(), tlsSettings.getCipherSuites(), tlsSettings.performHostnameValidation()));
     }
     return builder;
   }

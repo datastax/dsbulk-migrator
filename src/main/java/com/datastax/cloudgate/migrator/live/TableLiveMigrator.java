@@ -32,6 +32,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import com.datastax.oss.dsbulk.runner.utils.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -258,6 +260,32 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add(String.valueOf(settings.dsbulkLogDir));
     args.add("-query");
     args.add(buildExportQuery());
+
+    if (settings.exportSettings.tlsSettings != null) {
+      args.add("--driver.advanced.ssl-engine-factory.hostname-validation");
+      args.add(String.valueOf(settings.exportSettings.tlsSettings.performHostnameValidation()));
+      if (settings.exportSettings.tlsSettings.cipherSuites != null) {
+        args.add("--driver.advanced.ssl-engine-factory.cipher-suites");
+        args.add(String.join(",", settings.exportSettings.tlsSettings.cipherSuites));
+      }
+      if (settings.exportSettings.tlsSettings.keystoreSettings != null) {
+        args.add("--driver.advanced.ssl-engine-factory.keystore-path");
+        args.add(settings.exportSettings.tlsSettings.keystoreSettings.keystorePath.toString());
+        if (settings.exportSettings.tlsSettings.keystoreSettings.keystorePassword != null) {
+          args.add("--driver.advanced.ssl-engine-factory.keystore-password");
+          args.add(String.valueOf(settings.exportSettings.tlsSettings.keystoreSettings.keystorePassword));
+        }
+      }
+      if (settings.exportSettings.tlsSettings.truststoreSettings != null) {
+        args.add("--driver.advanced.ssl-engine-factory.truststore-path");
+        args.add(String.valueOf(settings.exportSettings.tlsSettings.truststoreSettings.truststorePath));
+        if (settings.exportSettings.tlsSettings.truststoreSettings.truststorePassword != null) {
+          args.add("--driver.advanced.ssl-engine-factory.truststore-password");
+          args.add(String.valueOf(settings.exportSettings.tlsSettings.truststoreSettings.truststorePassword));
+        }
+      }
+    }
+
     args.addAll(settings.exportSettings.extraDsbulkOptions);
     return args;
   }
@@ -315,6 +343,32 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add("-query");
       args.add(buildBatchImportQuery());
     }
+
+    if (settings.importSettings.tlsSettings != null) {
+      args.add("--driver.advanced.ssl-engine-factory.hostname-validation");
+      args.add(String.valueOf(settings.importSettings.tlsSettings.performHostnameValidation()));
+      if (settings.importSettings.tlsSettings.cipherSuites != null) {
+        args.add("--driver.advanced.ssl-engine-factory.cipher-suites");
+        args.add(String.join(",", settings.importSettings.tlsSettings.cipherSuites));
+      }
+      if (settings.importSettings.tlsSettings.keystoreSettings != null) {
+        args.add("--driver.advanced.ssl-engine-factory.keystore-path");
+        args.add(settings.exportSettings.tlsSettings.keystoreSettings.keystorePath.toString());
+        if (settings.exportSettings.tlsSettings.keystoreSettings.keystorePassword != null) {
+          args.add("--driver.advanced.ssl-engine-factory.keystore-password");
+          args.add(String.valueOf(settings.exportSettings.tlsSettings.keystoreSettings.keystorePassword));
+        }
+      }
+      if (settings.importSettings.tlsSettings.truststoreSettings != null) {
+        args.add("--driver.advanced.ssl-engine-factory.truststore-path");
+        args.add(String.valueOf(settings.exportSettings.tlsSettings.truststoreSettings.truststorePath));
+        if (settings.exportSettings.tlsSettings.truststoreSettings.truststorePassword != null) {
+          args.add("--driver.advanced.ssl-engine-factory.truststore-password");
+          args.add(String.valueOf(settings.exportSettings.tlsSettings.truststoreSettings.truststorePassword));
+        }
+      }
+    }
+
     args.addAll(settings.importSettings.extraDsbulkOptions);
     return args;
   }
@@ -326,7 +380,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
         SessionUtils.createSession(
             settings.importSettings.clusterInfo,
             settings.importSettings.credentials,
-            settings.importSettings.getSslContext())) {
+            settings.importSettings.tlsSettings)) {
       session.execute("TRUNCATE " + tableName);
       LOGGER.info("Successfully truncated {} on target cluster", tableName);
     }

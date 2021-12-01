@@ -121,7 +121,43 @@ public class ImportSettings {
   }
 
   @ArgGroup(exclusive = false)
-  public ImportKeystoreSettings keystoreSettings;
+  public ImportTlsSettings tlsSettings;
+
+  public static class ImportTlsSettings implements TlsSettings {
+    @ArgGroup(exclusive = false)
+    public ImportKeystoreSettings keystoreSettings;
+    @ArgGroup(exclusive = false)
+    public ImportTruststoreSettings truststoreSettings;
+
+    @Option(
+        names = "--import-tls-hostname-validation",
+        description =
+                "Whether hostname validation should be performed when connecting to the target cluster. Only relevant when connecting to a cluster requiring TLS.",
+        defaultValue = "false")
+    public boolean hostnameValidation = false;
+
+    @Option(
+        names = "--import-tls-cipher-suites",
+        description =
+                "Cipher suites to be used when connecting to the target cluster. Only relevant when connecting to a cluster requiring TLS.")
+    public String[] cipherSuites;
+
+    public SSLContext getSslContext() throws IllegalStateException {
+      return truststoreSettings != null
+              ? SslUtils.createSslContext(keystoreSettings, truststoreSettings)
+              : null;
+    }
+
+    @Override
+    public boolean performHostnameValidation() {
+      return hostnameValidation;
+    }
+
+    @Override
+    public String[] getCipherSuites() {
+      return cipherSuites;
+    }
+  }
 
   public static class ImportKeystoreSettings implements SslStore {
 
@@ -157,9 +193,6 @@ public class ImportSettings {
     }
   }
 
-  @ArgGroup(exclusive = false)
-  public ImportTruststoreSettings truststoreSettings;
-
   public static class ImportTruststoreSettings implements SslStore {
 
     @Option(
@@ -192,12 +225,6 @@ public class ImportSettings {
     public char[] getPassword() {
       return truststorePassword;
     }
-  }
-
-  public SSLContext getSslContext() throws IllegalStateException {
-    return truststoreSettings != null
-        ? SslUtils.createSslContext(keystoreSettings, truststoreSettings)
-        : null;
   }
 
   @Option(

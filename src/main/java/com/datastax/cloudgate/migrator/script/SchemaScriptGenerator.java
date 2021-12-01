@@ -42,7 +42,7 @@ public class SchemaScriptGenerator {
         ModelUtils.buildExportedTables(
                 settings.exportSettings.clusterInfo,
                 settings.exportSettings.credentials,
-                settings.exportSettings.getSslContext(),
+                settings.exportSettings.tlsSettings,
                 settings)
             .stream()
             .map(exportedTable -> new TableScriptGenerator(exportedTable, settings))

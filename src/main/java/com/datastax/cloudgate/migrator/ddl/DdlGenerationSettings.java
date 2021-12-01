@@ -17,14 +17,11 @@ package com.datastax.cloudgate.migrator.ddl;
 
 import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportClusterInfo;
 import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportCredentials;
-import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportKeystoreSettings;
-import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportTruststoreSettings;
+import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportTlsSettings;
 import com.datastax.cloudgate.migrator.settings.InclusionSettings;
-import com.datastax.cloudgate.migrator.utils.SslUtils;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.regex.Pattern;
-import javax.net.ssl.SSLContext;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
@@ -82,16 +79,7 @@ public class DdlGenerationSettings implements InclusionSettings {
   public ExportCredentials credentials;
 
   @ArgGroup(exclusive = false)
-  public ExportKeystoreSettings keystoreSettings;
-
-  @ArgGroup(exclusive = false)
-  public ExportTruststoreSettings truststoreSettings;
-
-  public SSLContext getSslContext() throws IllegalStateException {
-    return truststoreSettings != null
-        ? SslUtils.createSslContext(keystoreSettings, truststoreSettings)
-        : null;
-  }
+  public ExportTlsSettings tlsSettings;
 
   @Override
   public Pattern getKeyspacesPattern() {
