@@ -24,9 +24,11 @@ import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.util.List;
 import javax.net.ssl.SSLContext;
@@ -54,7 +56,8 @@ public class SessionUtils {
   }
 
   private static CqlSessionBuilder createSessionBuilder(
-      ClusterInfo clusterInfo, Credentials credentials, TlsSettings tlsSettings) {
+      ClusterInfo clusterInfo, Credentials credentials, TlsSettings tlsSettings)
+          throws GeneralSecurityException, IOException {
     DriverConfigLoader loader =
         DriverConfigLoader.programmaticBuilder()
             .withString(
@@ -75,8 +78,8 @@ public class SessionUtils {
             return address instanceof InetSocketAddress && contactPoints.contains(address);
           });
 
-      if (tlsSettings.useTls()) {
-        builder.withSslContext(createSSLContext(tlsSettings)); // TODO Make it dynamic
+      if (tlsSettings != null) {
+        builder.withSslContext(tlsSettings.getSslContext());
       }
     }
     if (credentials != null) {
@@ -86,26 +89,26 @@ public class SessionUtils {
     return builder;
   }
 
-  private static SSLContext createSSLContext(TlsSettings tlsSettings) {
-    SSLContext sslContext = null;
-    try {
-      KeyStore keystore = KeyStore.getInstance("JKS");
-      char[] pwd = tlsSettings.getTruststorePassword();
-      File initialFile = new File(tlsSettings.getTruststorePath());
-      InputStream targetStream = new FileInputStream(initialFile);
-
-      keystore.load(targetStream, pwd);
-
-      TrustManagerFactory tmf =
-          TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-      tmf.init(keystore);
-      TrustManager[] tm = tmf.getTrustManagers();
-
-      sslContext = SSLContext.getInstance("TLS");
-      sslContext.init(null, tm, null);
-      return sslContext;
-    } catch (Exception e) {
-      throw new IllegalStateException("Could not create SSL context.", e);
-    }
-  }
+//  private static SSLContext createSSLContext(TlsSettings tlsSettings) {
+//    SSLContext sslContext = null;
+//    try {
+//      KeyStore keystore = KeyStore.getInstance("JKS");
+//      char[] pwd = tlsSettings.getTruststorePassword();
+//      File initialFile = new File(tlsSettings.getTruststorePath());
+//      InputStream targetStream = new FileInputStream(initialFile);
+//
+//      keystore.load(targetStream, pwd);
+//
+//      TrustManagerFactory tmf =
+//          TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+//      tmf.init(keystore);
+//      TrustManager[] tm = tmf.getTrustManagers();
+//
+//      sslContext = SSLContext.getInstance("TLS");
+//      sslContext.init(null, tm, null);
+//      return sslContext;
+//    } catch (Exception e) {
+//      throw new IllegalStateException("Could not create SSL context.", e);
+//    }
+//  }
 }

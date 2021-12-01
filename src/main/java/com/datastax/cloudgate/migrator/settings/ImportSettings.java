@@ -17,8 +17,11 @@ package com.datastax.cloudgate.migrator.settings;
 
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
+
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -27,6 +30,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
+
+import javax.net.ssl.SSLContext;
 
 public class ImportSettings {
 
@@ -124,32 +129,43 @@ public class ImportSettings {
   public static class ImportTlsSettings implements TlsSettings {
 
     @Option(
-        names = "--import-use-tls",
-        paramLabel = "BOOLEAN",
-        description =
-            "Whether TLS be used when connecting to the target cluster. If left to default or set to false, all other TLS-related parameters are ignored.",
-        required = false,
-        defaultValue = "false")
-    public boolean useTls = false;
+            names = "--import-tls-keystore-path",
+            paramLabel = "PATH",
+            description =
+                    "The path to a keystore file, if TLS and client encryption are required to connect to the target cluster. "
+                            + "Options --import-tls-keystore-path and --import-tls-keystore-password must be provided together, or not at all. ")
+    public Path keystorePath;
 
     @Option(
-        names = "--import-tls-truststore-path",
-        paramLabel = "STRING",
-        description =
-            "Path of the truststore to connect to the target cluster. Only relevant when connecting to a cluster requiring TLS.")
-    public String truststorePath = "";
+            names = "--import-tls-keystore-password",
+            paramLabel = "STRING",
+            description =
+                    "The password of the keystore file, if TLS and client encryption are required to connect to the target cluster. "
+                            + "Options --import-tls-keystore-path and --import-tls-keystore-password must be provided together, or not at all. "
+                            + "Omit the parameter value to be prompted for the password interactively.",
+            prompt = "Enter the password for the keystore to connect to the target cluster: ",
+            interactive = true)
+    public char[] keystorePassword;
 
     @Option(
-        names = "--import-tls-truststore-password",
-        paramLabel = "STRING",
-        description =
-            "The password of the truststore used to connect to the target cluster.  Only relevant when connecting to a cluster requiring TLS."
-                + "Should only be provided if specifying a password-protected truststore. "
-                + "Omit the parameter value to be prompted for the password interactively. "
-                + "If the truststore does not require a password, when prompted for it just press enter",
-        required = false,
-        prompt = "Enter the password for the truststore to connect the target cluster: ",
-        interactive = true)
+            names = "--import-tls-truststore-path",
+            paramLabel = "PATH",
+            description =
+                    "The path to a truststore file, if TLS is required to connect to the target cluster. "
+                            + "Options --tls-import-truststore-path and --import-tls-truststore-password must be provided together, or not at all. ",
+            required = true)
+    public Path truststorePath;
+
+    @Option(
+            names = "--import-tls-truststore-password",
+            paramLabel = "STRING",
+            description =
+                    "The password of the truststore file, if TLS is required to connect to the target cluster. "
+                            + "Options --import-tls-truststore-path and --import-tls-truststore-password must be provided together, or not at all. "
+                            + "Omit the parameter value to be prompted for the password interactively.",
+            required = true,
+            prompt = "Enter the password for the truststore to connect to the target cluster: ",
+            interactive = true)
     public char[] truststorePassword;
 
     @Option(
@@ -157,22 +173,18 @@ public class ImportSettings {
         paramLabel = "BOOLEAN",
         description =
             "Whether hostname validation should be performed when connecting to the target cluster. Only relevant when connecting to a cluster requiring TLS.",
-        defaultValue = "true")
-    public boolean performHostnameValidation = true;
+        defaultValue = "false")
+    public boolean performHostnameValidation = false;
 
     @Override
     public boolean useTls() {
-      return useTls;
+      return truststorePath != null ;
     }
 
     @Override
-    public String getTruststorePath() {
-      return truststorePath;
-    }
-
-    @Override
-    public char[] getTruststorePassword() {
-      return truststorePassword;
+    public SSLContext getSslContext() throws GeneralSecurityException, IOException {
+      return SslUtils.createSslContext(
+              keystorePath, keystorePassword, truststorePath, truststorePassword);
     }
 
     @Override

@@ -17,14 +17,19 @@ package com.datastax.cloudgate.migrator.settings;
 
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
+
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
+
+import javax.net.ssl.SSLContext;
 
 public class ExportSettings {
 
@@ -121,30 +126,47 @@ public class ExportSettings {
 
   public static class ExportTlsSettings implements TlsSettings {
 
-    @Option(
-        names = "--export-use-tls",
-        description =
-            "Whether TLS must be used when connecting to the origin cluster. If omitted, all other TLS-related parameters are ignored.",
-        defaultValue = "false")
-    public boolean useTls = false;
+//    @Option(
+//        names = "--export-use-tls",
+//        description =
+//            "Whether TLS must be used when connecting to the origin cluster. If omitted, all other TLS-related parameters are ignored.",
+//        defaultValue = "false")
+//    public boolean useTls = false;
 
     @Option(
-        names = "--export-tls-truststore-path",
-        paramLabel = "STRING",
-        description =
-            "Path of the truststore to connect to the origin cluster. Only relevant when connecting to a cluster requiring TLS.")
-    public String truststorePath = "";
+            names = "--export-tls-keystore-path",
+            paramLabel = "PATH",
+            description =
+                    "The path to a keystore file, if TLS and client encryption are required to connect to the origin cluster. ")
+    public Path keystorePath;
 
     @Option(
-        names = "--export-tls-truststore-password",
-        paramLabel = "STRING",
-        description =
-            "The password of the truststore used to connect to the origin cluster.  Only relevant when connecting to a cluster requiring TLS."
-                + "Should only be provided if specifying a password-protected truststore. "
-                + "Omit the parameter value to be prompted for the password interactively. "
-                + "If the truststore does not require a password, when prompted for it just press enter",
-        prompt = "Enter the password for the truststore to connect the target cluster: ",
-        interactive = true)
+            names = "--export-tls-keystore-password",
+            paramLabel = "STRING",
+            description =
+                    "The password of the keystore file, if TLS and client encryption are required to connect to the origin cluster. "
+                            + "Omit the parameter value to be prompted for the password interactively.",
+            prompt = "Enter the password for the keystore to connect to the origin cluster: ",
+            interactive = true)
+    public char[] keystorePassword;
+
+    @Option(
+            names = "--export-tls-truststore-path",
+            paramLabel = "PATH",
+            description =
+                    "The path to a truststore file, if TLS is required to connect to the origin cluster. ",
+            required = true)
+    public Path truststorePath;
+
+    @Option(
+            names = "--export-tls-truststore-password",
+            paramLabel = "STRING",
+            description =
+                    "The password of the truststore file, if TLS is required to connect to the origin cluster. "
+                            + "Omit the parameter value to be prompted for the password interactively.",
+            required = true,
+            prompt = "Enter the password for the truststore to connect to the origin cluster: ",
+            interactive = true)
     public char[] truststorePassword;
 
     @Option(
@@ -156,17 +178,13 @@ public class ExportSettings {
 
     @Override
     public boolean useTls() {
-      return useTls;
+      return truststorePath != null;
     }
 
     @Override
-    public String getTruststorePath() {
-      return truststorePath;
-    }
-
-    @Override
-    public char[] getTruststorePassword() {
-      return truststorePassword;
+    public SSLContext getSslContext() throws GeneralSecurityException, IOException {
+      return SslUtils.createSslContext(
+              keystorePath, keystorePassword, truststorePath, truststorePassword);
     }
 
     @Override

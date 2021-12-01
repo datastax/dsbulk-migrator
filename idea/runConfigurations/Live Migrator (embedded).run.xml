@@ -2,7 +2,7 @@
   <configuration default="false" name="Live Migrator with TLS (embedded)" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator" />
     <module name="schema-migrator" />
-    <option name="PROGRAM_PARAMETERS" value="migrate-live --data-dir=target/export --table-types=all --export-host=54.86.46.245:9042 --export-username=cassandra --export-password=cassandra --export-use-tls --export-tls-truststore-path=$USER_HOME$/proxy_tls_tests/test_jks.jks --export-tls-truststore-password=mypassword --import-host=54.86.46.245:9042 --import-username=cassandra --import-password=cassandra --dsbulk-use-embedded" />
+    <option name="PROGRAM_PARAMETERS" value="migrate-live --data-dir=target/export --table-types=all --export-host=54.86.46.245:9042 --export-username=cassandra --export-password=cassandra --export-tls-truststore-path=$USER_HOME$/proxy_tls_tests/test_jks.jks --export-tls-truststore-password=mypassword --import-host=54.86.46.245:9042 --import-username=cassandra --import-password=cassandra --import-tls-truststore-path=$USER_HOME$/proxy_tls_tests/test_jks.jks --import-tls-truststore-password=mypassword --dsbulk-use-embedded" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
