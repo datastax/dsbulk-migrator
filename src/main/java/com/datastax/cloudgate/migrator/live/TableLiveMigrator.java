@@ -258,6 +258,29 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add(String.valueOf(settings.dsbulkLogDir));
     args.add("-query");
     args.add(buildExportQuery());
+    if (settings.exportSettings.tlsSettings != null) {
+      //TODO check: is this really necessary or can it be left to its default?
+      args.add("--driver.advanced.ssl-engine-factory.class");
+      args.add("DefaultSslEngineFactory");
+      if (settings.exportSettings.tlsSettings.truststorePath != null) {
+        args.add("--driver.advanced.ssl-engine-factory.truststore-path");
+        args.add(String.valueOf(settings.exportSettings.tlsSettings.truststorePath));
+      }
+      if (settings.exportSettings.tlsSettings.truststorePassword != null) {
+        args.add("--driver.advanced.ssl-engine-factory.truststore-password");
+        args.add(String.valueOf(settings.exportSettings.tlsSettings.truststorePassword));
+      }
+      if (settings.exportSettings.tlsSettings.keystorePath != null) {
+        args.add("--driver.advanced.ssl-engine-factory.keystore-path");
+        args.add(settings.exportSettings.tlsSettings.keystorePath.toString());
+      }
+      if (settings.exportSettings.tlsSettings.keystorePassword != null) {
+        args.add("--driver.advanced.ssl-engine-factory.keystore-password");
+        args.add(String.valueOf(settings.exportSettings.tlsSettings.keystorePassword));
+      }
+      args.add("--driver.advanced.ssl-engine-factory.hostname-validation");
+      args.add(String.valueOf(settings.exportSettings.tlsSettings.performHostnameValidation));
+    }
     args.addAll(settings.exportSettings.extraDsbulkOptions);
     return args;
   }
@@ -314,6 +337,29 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add("DISABLED");
       args.add("-query");
       args.add(buildBatchImportQuery());
+    }
+    if (settings.importSettings.tlsSettings != null) {
+      //TODO check: is this really necessary or can it be left to its default?
+      args.add("--driver.advanced.ssl-engine-factory.class");
+      args.add("DefaultSslEngineFactory");
+      if (settings.importSettings.tlsSettings.truststorePath != null) {
+        args.add("--driver.advanced.ssl-engine-factory.truststore-path");
+        args.add(String.valueOf(settings.importSettings.tlsSettings.truststorePath));
+      }
+      if (settings.importSettings.tlsSettings.truststorePassword != null) {
+        args.add("--driver.advanced.ssl-engine-factory.truststore-password");
+        args.add(String.valueOf(settings.importSettings.tlsSettings.truststorePassword));
+      }
+      if (settings.importSettings.tlsSettings.keystorePath != null) {
+        args.add("--driver.advanced.ssl-engine-factory.keystore-path");
+        args.add(settings.importSettings.tlsSettings.keystorePath.toString());
+      }
+      if (settings.importSettings.tlsSettings.keystorePassword != null) {
+        args.add("--driver.advanced.ssl-engine-factory.keystore-password");
+        args.add(String.valueOf(settings.importSettings.tlsSettings.keystorePassword));
+      }
+      args.add("--driver.advanced.ssl-engine-factory.hostname-validation");
+      args.add(String.valueOf(settings.importSettings.tlsSettings.performHostnameValidation));
     }
     args.addAll(settings.importSettings.extraDsbulkOptions);
     return args;
