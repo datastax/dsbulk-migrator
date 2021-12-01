@@ -177,11 +177,6 @@ public class ImportSettings {
     public boolean performHostnameValidation = false;
 
     @Override
-    public boolean useTls() {
-      return truststorePath != null ;
-    }
-
-    @Override
     public SSLContext getSslContext() throws GeneralSecurityException, IOException {
       return SslUtils.createSslContext(
               keystorePath, keystorePassword, truststorePath, truststorePassword);

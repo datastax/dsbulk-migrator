@@ -21,8 +21,6 @@ import java.security.GeneralSecurityException;
 
 public interface TlsSettings {
 
-  boolean useTls();
-
   SSLContext getSslContext() throws GeneralSecurityException, IOException;
 
   boolean performHostnameValidation();
