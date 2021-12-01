@@ -62,7 +62,6 @@ public class SslUtils {
       KeyManagerFactory kmf =
           KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
       kmf.init(ks, keystorePassword);
-      Arrays.fill(keystorePassword, (char) 0);
       return kmf;
     }
   }
@@ -75,7 +74,6 @@ public class SslUtils {
       TrustManagerFactory tmf =
           TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
       tmf.init(ts);
-      Arrays.fill(truststorePassword, (char) 0);
       return tmf;
     }
   }
