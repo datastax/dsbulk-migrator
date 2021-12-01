@@ -15,7 +15,10 @@
  */
 package com.datastax.cloudgate.migrator.utils;
 
+import com.datastax.cloudgate.migrator.settings.SslStore;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
@@ -28,38 +31,52 @@ import javax.net.ssl.TrustManagerFactory;
 
 public class SslUtils {
 
-  public static SSLContext createSslContext(
-      Path keystorePath, char[] keystorePassword, Path truststorePath, char[] truststorePassword)
-      throws GeneralSecurityException, IOException {
-    KeyManagerFactory kmf = null;
-    if (keystorePath != null && keystorePassword != null) {
-      kmf = createKeyManagerFactory(keystorePath, keystorePassword);
+  public static SSLContext createSslContext(SslStore keystore, SslStore truststore) {
+    try {
+      KeyManagerFactory kmf = null;
+      if (keystore != null) {
+        kmf = createKeyManagerFactory(keystore.getPath(), keystore.getPassword());
+      }
+      TrustManagerFactory tmf = null;
+      if (truststore != null) {
+        tmf = createTrustManagerFactory(truststore.getPath(), truststore.getPassword());
+      }
+      SSLContext sslContext = SSLContext.getInstance("SSL");
+      sslContext.init(
+          kmf != null ? kmf.getKeyManagers() : null,
+          tmf != null ? tmf.getTrustManagers() : null,
+          new SecureRandom());
+      return sslContext;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    } catch (GeneralSecurityException e) {
+      throw new IllegalStateException(e);
     }
-    TrustManagerFactory tmf = createTrustManagerFactory(truststorePath, truststorePassword);
-    SSLContext sslContext = SSLContext.getInstance("SSL");
-    sslContext.init(
-        kmf != null ? kmf.getKeyManagers() : null, tmf.getTrustManagers(), new SecureRandom());
-    return sslContext;
   }
 
   private static KeyManagerFactory createKeyManagerFactory(
       Path keystorePath, char[] keystorePassword) throws IOException, GeneralSecurityException {
     KeyStore ks = KeyStore.getInstance("JKS");
-    ks.load(Files.newInputStream(keystorePath), keystorePassword);
-    KeyManagerFactory kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-    kmf.init(ks, keystorePassword);
-    Arrays.fill(keystorePassword, (char) 0);
-    return kmf;
+    try (InputStream kis = Files.newInputStream(keystorePath)) {
+      ks.load(kis, keystorePassword);
+      KeyManagerFactory kmf =
+          KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+      kmf.init(ks, keystorePassword);
+      Arrays.fill(keystorePassword, (char) 0);
+      return kmf;
+    }
   }
 
   private static TrustManagerFactory createTrustManagerFactory(
       Path truststorePath, char[] truststorePassword) throws IOException, GeneralSecurityException {
     KeyStore ts = KeyStore.getInstance("JKS");
-    ts.load(Files.newInputStream(truststorePath), truststorePassword);
-    TrustManagerFactory tmf =
-        TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-    tmf.init(ts);
-    Arrays.fill(truststorePassword, (char) 0);
-    return tmf;
+    try (InputStream tis = Files.newInputStream(truststorePath)) {
+      ts.load(tis, truststorePassword);
+      TrustManagerFactory tmf =
+          TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+      tmf.init(ts);
+      Arrays.fill(truststorePassword, (char) 0);
+      return tmf;
+    }
   }
 }

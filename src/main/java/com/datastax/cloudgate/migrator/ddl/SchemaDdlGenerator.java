@@ -61,7 +61,7 @@ public class SchemaDdlGenerator {
     this.settings = settings;
     List<ExportedTable> exportedTables =
         ModelUtils.buildExportedTables(
-            settings.clusterInfo, settings.credentials, settings.tlsSettings, settings);
+            settings.clusterInfo, settings.credentials, settings.getSslContext(), settings);
     for (ExportedTable exportedTable : exportedTables) {
       keyspaces.add(exportedTable.keyspace);
       // include all functions, aggregates and user-defined types

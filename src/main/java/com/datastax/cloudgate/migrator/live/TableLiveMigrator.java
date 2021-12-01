@@ -326,7 +326,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
         SessionUtils.createSession(
             settings.importSettings.clusterInfo,
             settings.importSettings.credentials,
-            settings.importSettings.tlsSettings)) {
+            settings.importSettings.getSslContext())) {
       session.execute("TRUNCATE " + tableName);
       LOGGER.info("Successfully truncated {} on target cluster", tableName);
     }

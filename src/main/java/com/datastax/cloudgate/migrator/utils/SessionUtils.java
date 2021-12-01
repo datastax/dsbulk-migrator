@@ -17,7 +17,6 @@ package com.datastax.cloudgate.migrator.utils;
 
 import com.datastax.cloudgate.migrator.settings.ClusterInfo;
 import com.datastax.cloudgate.migrator.settings.Credentials;
-import com.datastax.cloudgate.migrator.settings.TlsSettings;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
@@ -27,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import javax.net.ssl.SSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,11 +35,11 @@ public class SessionUtils {
   private static final Logger LOGGER = LoggerFactory.getLogger(SessionUtils.class);
 
   public static CqlSession createSession(
-      ClusterInfo clusterInfo, Credentials credentials, TlsSettings tls) {
+      ClusterInfo clusterInfo, Credentials credentials, SSLContext sslContext) {
     String clusterName = clusterInfo.isOrigin() ? "origin" : "target";
     try {
       LOGGER.info("Contacting {} cluster...", clusterName);
-      CqlSession session = createSessionBuilder(clusterInfo, credentials, tls).build();
+      CqlSession session = createSessionBuilder(clusterInfo, credentials, sslContext).build();
       LOGGER.info("Successfully contacted {} cluster", clusterName);
       return session;
     } catch (Exception e) {
@@ -48,7 +48,7 @@ public class SessionUtils {
   }
 
   private static CqlSessionBuilder createSessionBuilder(
-      ClusterInfo clusterInfo, Credentials credentials, TlsSettings tls)
+      ClusterInfo clusterInfo, Credentials credentials, SSLContext sslContext)
       throws GeneralSecurityException, IOException {
     DriverConfigLoader loader =
         DriverConfigLoader.programmaticBuilder()
@@ -72,8 +72,8 @@ public class SessionUtils {
       builder.withAuthCredentials(
           credentials.getUsername(), String.valueOf(credentials.getPassword()));
     }
-    if (tls != null) {
-      builder.withSslContext(tls.getSslContext());
+    if (sslContext != null) {
+      builder.withSslContext(sslContext);
     }
     return builder;
   }

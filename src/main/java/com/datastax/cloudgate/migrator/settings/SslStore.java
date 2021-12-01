@@ -15,11 +15,11 @@
  */
 package com.datastax.cloudgate.migrator.settings;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import javax.net.ssl.SSLContext;
+import java.nio.file.Path;
 
-public interface TlsSettings {
+public interface SslStore {
 
-  SSLContext getSslContext() throws GeneralSecurityException, IOException;
+  Path getPath();
+
+  char[] getPassword();
 }

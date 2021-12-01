@@ -18,10 +18,8 @@ package com.datastax.cloudgate.migrator.settings;
 import com.datastax.cloudgate.migrator.utils.SslUtils;
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -121,28 +119,46 @@ public class ExportSettings {
   }
 
   @ArgGroup(exclusive = false)
-  public ExportTlsSettings tlsSettings;
+  public ExportKeystoreSettings keystoreSettings;
 
-  public static class ExportTlsSettings implements TlsSettings {
+  public static class ExportKeystoreSettings implements SslStore {
 
     @Option(
         names = "--export-tls-keystore-path",
         paramLabel = "PATH",
         description =
-            "The path to a keystore file, if TLS and client encryption are required to connect to the origin cluster. "
-                + "Options --export-tls-keystore-path and --export-tls-keystore-password must be provided together, or not at all. ")
+            "The path to a keystore file, if mTLS is required to connect to the origin cluster. "
+                + "Options --export-tls-keystore-path and --export-tls-keystore-password must be provided together, or not at all. ",
+        required = true)
     public Path keystorePath;
 
     @Option(
         names = "--export-tls-keystore-password",
         paramLabel = "STRING",
         description =
-            "The password of the keystore file, if TLS and client encryption are required to connect to the origin cluster. "
+            "The password of the keystore file, if mTLS is required to connect to the origin cluster. "
                 + "Options --export-tls-keystore-path and --export-tls-keystore-password must be provided together, or not at all. "
                 + "Omit the parameter value to be prompted for the password interactively.",
+        required = true,
         prompt = "Enter the password for the keystore to connect to the origin cluster: ",
         interactive = true)
     public char[] keystorePassword;
+
+    @Override
+    public Path getPath() {
+      return keystorePath;
+    }
+
+    @Override
+    public char[] getPassword() {
+      return keystorePassword;
+    }
+  }
+
+  @ArgGroup(exclusive = false)
+  public ExportTruststoreSettings truststoreSettings;
+
+  public static class ExportTruststoreSettings implements SslStore {
 
     @Option(
         names = "--export-tls-truststore-path",
@@ -166,10 +182,20 @@ public class ExportSettings {
     public char[] truststorePassword;
 
     @Override
-    public SSLContext getSslContext() throws GeneralSecurityException, IOException {
-      return SslUtils.createSslContext(
-          keystorePath, keystorePassword, truststorePath, truststorePassword);
+    public Path getPath() {
+      return truststorePath;
     }
+
+    @Override
+    public char[] getPassword() {
+      return truststorePassword;
+    }
+  }
+
+  public SSLContext getSslContext() throws IllegalStateException {
+    return truststoreSettings != null
+        ? SslUtils.createSslContext(keystoreSettings, truststoreSettings)
+        : null;
   }
 
   @Option(

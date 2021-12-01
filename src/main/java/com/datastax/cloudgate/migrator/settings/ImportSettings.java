@@ -18,10 +18,8 @@ package com.datastax.cloudgate.migrator.settings;
 import com.datastax.cloudgate.migrator.utils.SslUtils;
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
-import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -123,35 +121,53 @@ public class ImportSettings {
   }
 
   @ArgGroup(exclusive = false)
-  public ImportTlsSettings tlsSettings;
+  public ImportKeystoreSettings keystoreSettings;
 
-  public static class ImportTlsSettings implements TlsSettings {
+  public static class ImportKeystoreSettings implements SslStore {
 
     @Option(
         names = "--import-tls-keystore-path",
         paramLabel = "PATH",
         description =
-            "The path to a keystore file, if TLS and client encryption are required to connect to the target cluster. "
-                + "Options --import-tls-keystore-path and --import-tls-keystore-password must be provided together, or not at all. ")
+            "The path to a keystore file, if mTLS is required to connect to the target cluster. "
+                + "Options --import-tls-keystore-path and --import-tls-keystore-password must be provided together, or not at all. ",
+        required = true)
     public Path keystorePath;
 
     @Option(
         names = "--import-tls-keystore-password",
         paramLabel = "STRING",
         description =
-            "The password of the keystore file, if TLS and client encryption are required to connect to the target cluster. "
+            "The password of the keystore file, if mTLS is required to connect to the target cluster. "
                 + "Options --import-tls-keystore-path and --import-tls-keystore-password must be provided together, or not at all. "
                 + "Omit the parameter value to be prompted for the password interactively.",
+        required = true,
         prompt = "Enter the password for the keystore to connect to the target cluster: ",
         interactive = true)
     public char[] keystorePassword;
+
+    @Override
+    public Path getPath() {
+      return keystorePath;
+    }
+
+    @Override
+    public char[] getPassword() {
+      return keystorePassword;
+    }
+  }
+
+  @ArgGroup(exclusive = false)
+  public ImportTruststoreSettings truststoreSettings;
+
+  public static class ImportTruststoreSettings implements SslStore {
 
     @Option(
         names = "--import-tls-truststore-path",
         paramLabel = "PATH",
         description =
             "The path to a truststore file, if TLS is required to connect to the target cluster. "
-                + "Options --tls-import-truststore-path and --import-tls-truststore-password must be provided together, or not at all. ",
+                + "Options --import-tls-truststore-path and --import-tls-truststore-password must be provided together, or not at all. ",
         required = true)
     public Path truststorePath;
 
@@ -160,7 +176,7 @@ public class ImportSettings {
         paramLabel = "STRING",
         description =
             "The password of the truststore file, if TLS is required to connect to the target cluster. "
-                + "Options --import-tls-truststore-path and --import-tls-truststore-password must be provided together, or not at all. "
+                + "Options --import-truststore-path and --import-truststore-password must be provided together, or not at all. "
                 + "Omit the parameter value to be prompted for the password interactively.",
         required = true,
         prompt = "Enter the password for the truststore to connect to the target cluster: ",
@@ -168,10 +184,20 @@ public class ImportSettings {
     public char[] truststorePassword;
 
     @Override
-    public SSLContext getSslContext() throws GeneralSecurityException, IOException {
-      return SslUtils.createSslContext(
-          keystorePath, keystorePassword, truststorePath, truststorePassword);
+    public Path getPath() {
+      return truststorePath;
     }
+
+    @Override
+    public char[] getPassword() {
+      return truststorePassword;
+    }
+  }
+
+  public SSLContext getSslContext() throws IllegalStateException {
+    return truststoreSettings != null
+        ? SslUtils.createSslContext(keystoreSettings, truststoreSettings)
+        : null;
   }
 
   @Option(

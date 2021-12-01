@@ -21,7 +21,6 @@ import com.datastax.cloudgate.migrator.model.TableType;
 import com.datastax.cloudgate.migrator.settings.ClusterInfo;
 import com.datastax.cloudgate.migrator.settings.Credentials;
 import com.datastax.cloudgate.migrator.settings.InclusionSettings;
-import com.datastax.cloudgate.migrator.settings.TlsSettings;
 import com.datastax.oss.driver.api.core.CqlIdentifier;
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.cql.ResultSet;
@@ -38,6 +37,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.net.ssl.SSLContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,10 +48,10 @@ public class ModelUtils {
   public static List<ExportedTable> buildExportedTables(
       ClusterInfo origin,
       Credentials credentials,
-      TlsSettings tls,
+      SSLContext sslContext,
       InclusionSettings inclusionSettings) {
     List<ExportedTable> exportedTables = new ArrayList<>();
-    try (CqlSession session = SessionUtils.createSession(origin, credentials, tls)) {
+    try (CqlSession session = SessionUtils.createSession(origin, credentials, sslContext)) {
       LOGGER.info("Tables to migrate:");
       List<KeyspaceMetadata> keyspaces = getExportedKeyspaces(session, inclusionSettings);
       for (KeyspaceMetadata keyspace : keyspaces) {
