@@ -15,14 +15,18 @@
  */
 package com.datastax.cloudgate.migrator.settings;
 
+import com.datastax.cloudgate.migrator.utils.SslUtils;
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.shaded.guava.common.net.HostAndPort;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import javax.net.ssl.SSLContext;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Option;
 
@@ -116,62 +120,55 @@ public class ExportSettings {
     }
   }
 
-  @ArgGroup(multiplicity = "1")
+  @ArgGroup(exclusive = false)
   public ExportTlsSettings tlsSettings;
 
   public static class ExportTlsSettings implements TlsSettings {
 
     @Option(
-        names = "--export-use-tls",
+        names = "--export-tls-keystore-path",
+        paramLabel = "PATH",
         description =
-            "Whether TLS must be used when connecting to the origin cluster. If omitted, all other TLS-related parameters are ignored.",
-        defaultValue = "false")
-    public boolean useTls = false;
+            "The path to a keystore file, if TLS and client encryption are required to connect to the origin cluster. "
+                + "Options --export-tls-keystore-path and --export-tls-keystore-password must be provided together, or not at all. ")
+    public Path keystorePath;
+
+    @Option(
+        names = "--export-tls-keystore-password",
+        paramLabel = "STRING",
+        description =
+            "The password of the keystore file, if TLS and client encryption are required to connect to the origin cluster. "
+                + "Options --export-tls-keystore-path and --export-tls-keystore-password must be provided together, or not at all. "
+                + "Omit the parameter value to be prompted for the password interactively.",
+        prompt = "Enter the password for the keystore to connect to the origin cluster: ",
+        interactive = true)
+    public char[] keystorePassword;
 
     @Option(
         names = "--export-tls-truststore-path",
-        paramLabel = "STRING",
+        paramLabel = "PATH",
         description =
-            "Path of the truststore to connect to the origin cluster. Only relevant when connecting to a cluster requiring TLS.")
-    public String truststorePath = "";
+            "The path to a truststore file, if TLS is required to connect to the origin cluster. "
+                + "Options --export-tls-truststore-path and --export-tls-truststore-password must be provided together, or not at all. ",
+        required = true)
+    public Path truststorePath;
 
     @Option(
         names = "--export-tls-truststore-password",
         paramLabel = "STRING",
         description =
-            "The password of the truststore used to connect to the origin cluster.  Only relevant when connecting to a cluster requiring TLS."
-                + "Should only be provided if specifying a password-protected truststore. "
-                + "Omit the parameter value to be prompted for the password interactively. "
-                + "If the truststore does not require a password, when prompted for it just press enter",
-        prompt = "Enter the password for the truststore to connect the target cluster: ",
+            "The password of the truststore file, if TLS is required to connect to the origin cluster. "
+                + "Options --export-truststore-path and --export-truststore-password must be provided together, or not at all. "
+                + "Omit the parameter value to be prompted for the password interactively.",
+        required = true,
+        prompt = "Enter the password for the truststore to connect to the origin cluster: ",
         interactive = true)
     public char[] truststorePassword;
 
-//    @Option(
-//        names = "--export-tls-hostname-validation",
-//        description =
-//            "Whether hostname validation should be performed when connecting to the origin cluster. Only relevant when connecting to a cluster requiring TLS.",
-//        defaultValue = "false")
-    public boolean performHostnameValidation = false;
-
     @Override
-    public boolean useTls() {
-      return useTls;
-    }
-
-    @Override
-    public String getTruststorePath() {
-      return truststorePath;
-    }
-
-    @Override
-    public char[] getTruststorePassword() {
-      return truststorePassword;
-    }
-
-    @Override
-    public boolean performHostnameValidation() {
-      return performHostnameValidation;
+    public SSLContext getSslContext() throws GeneralSecurityException, IOException {
+      return SslUtils.createSslContext(
+          keystorePath, keystorePassword, truststorePath, truststorePassword);
     }
   }
 

@@ -15,13 +15,11 @@
  */
 package com.datastax.cloudgate.migrator.settings;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import javax.net.ssl.SSLContext;
+
 public interface TlsSettings {
 
-  boolean useTls();
-
-  String getTruststorePath();
-
-  char[] getTruststorePassword();
-
-  boolean performHostnameValidation();
+  SSLContext getSslContext() throws GeneralSecurityException, IOException;
 }

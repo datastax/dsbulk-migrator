@@ -48,10 +48,10 @@ public class ModelUtils {
   public static List<ExportedTable> buildExportedTables(
       ClusterInfo origin,
       Credentials credentials,
-      TlsSettings originTlsSettings,
+      TlsSettings tls,
       InclusionSettings inclusionSettings) {
     List<ExportedTable> exportedTables = new ArrayList<>();
-    try (CqlSession session = SessionUtils.createSession(origin, credentials, originTlsSettings)) {
+    try (CqlSession session = SessionUtils.createSession(origin, credentials, tls)) {
       LOGGER.info("Tables to migrate:");
       List<KeyspaceMetadata> keyspaces = getExportedKeyspaces(session, inclusionSettings);
       for (KeyspaceMetadata keyspace : keyspaces) {
