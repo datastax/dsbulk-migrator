@@ -262,6 +262,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add(buildExportQuery());
 
     if (settings.exportSettings.tlsSettings != null) {
+      args.add("--driver.advanced.ssl-engine-factory.class");
+      args.add("DefaultSslEngineFactory");
       args.add("--driver.advanced.ssl-engine-factory.hostname-validation");
       args.add(String.valueOf(settings.exportSettings.tlsSettings.performHostnameValidation()));
       if (settings.exportSettings.tlsSettings.cipherSuites != null) {
@@ -345,6 +347,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
     }
 
     if (settings.importSettings.tlsSettings != null) {
+      args.add("--driver.advanced.ssl-engine-factory.class");
+      args.add("DefaultSslEngineFactory");
       args.add("--driver.advanced.ssl-engine-factory.hostname-validation");
       args.add(String.valueOf(settings.importSettings.tlsSettings.performHostnameValidation()));
       if (settings.importSettings.tlsSettings.cipherSuites != null) {
