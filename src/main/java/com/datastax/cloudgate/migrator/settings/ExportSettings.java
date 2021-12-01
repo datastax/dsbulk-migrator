@@ -116,6 +116,65 @@ public class ExportSettings {
     }
   }
 
+  @ArgGroup(multiplicity = "1")
+  public ExportTlsSettings tlsSettings;
+
+  public static class ExportTlsSettings implements TlsSettings {
+
+    @Option(
+        names = "--export-use-tls",
+        description =
+            "Whether TLS must be used when connecting to the origin cluster. If omitted, all other TLS-related parameters are ignored.",
+        defaultValue = "false")
+    public boolean useTls = false;
+
+    @Option(
+        names = "--export-tls-truststore-path",
+        paramLabel = "STRING",
+        description =
+            "Path of the truststore to connect to the origin cluster. Only relevant when connecting to a cluster requiring TLS.")
+    public String truststorePath = "";
+
+    @Option(
+        names = "--export-tls-truststore-password",
+        paramLabel = "STRING",
+        description =
+            "The password of the truststore used to connect to the origin cluster.  Only relevant when connecting to a cluster requiring TLS."
+                + "Should only be provided if specifying a password-protected truststore. "
+                + "Omit the parameter value to be prompted for the password interactively. "
+                + "If the truststore does not require a password, when prompted for it just press enter",
+        prompt = "Enter the password for the truststore to connect the target cluster: ",
+        interactive = true)
+    public char[] truststorePassword;
+
+//    @Option(
+//        names = "--export-tls-hostname-validation",
+//        description =
+//            "Whether hostname validation should be performed when connecting to the origin cluster. Only relevant when connecting to a cluster requiring TLS.",
+//        defaultValue = "false")
+    public boolean performHostnameValidation = false;
+
+    @Override
+    public boolean useTls() {
+      return useTls;
+    }
+
+    @Override
+    public String getTruststorePath() {
+      return truststorePath;
+    }
+
+    @Override
+    public char[] getTruststorePassword() {
+      return truststorePassword;
+    }
+
+    @Override
+    public boolean performHostnameValidation() {
+      return performHostnameValidation;
+    }
+  }
+
   @Option(
       names = "--export-consistency",
       paramLabel = "CONSISTENCY",

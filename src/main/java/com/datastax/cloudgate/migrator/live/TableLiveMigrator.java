@@ -324,7 +324,9 @@ public abstract class TableLiveMigrator extends TableProcessor {
     LOGGER.info("Truncating {} on target cluster...", tableName);
     try (CqlSession session =
         SessionUtils.createSession(
-            settings.importSettings.clusterInfo, settings.importSettings.credentials)) {
+            settings.importSettings.clusterInfo,
+            settings.importSettings.credentials,
+            settings.importSettings.tlsSettings)) {
       session.execute("TRUNCATE " + tableName);
       LOGGER.info("Successfully truncated {} on target cluster", tableName);
     }

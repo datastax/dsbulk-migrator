@@ -17,6 +17,7 @@ package com.datastax.cloudgate.migrator.ddl;
 
 import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportClusterInfo;
 import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportCredentials;
+import com.datastax.cloudgate.migrator.settings.ExportSettings.ExportTlsSettings;
 import com.datastax.cloudgate.migrator.settings.InclusionSettings;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -76,6 +77,9 @@ public class DdlGenerationSettings implements InclusionSettings {
 
   @ArgGroup(exclusive = false)
   public ExportCredentials credentials;
+
+  @ArgGroup(multiplicity = "1")
+  public ExportTlsSettings tlsSettings;
 
   @Override
   public Pattern getKeyspacesPattern() {

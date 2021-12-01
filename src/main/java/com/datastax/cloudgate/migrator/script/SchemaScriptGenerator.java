@@ -40,7 +40,10 @@ public class SchemaScriptGenerator {
     this.settings = settings;
     generators =
         ModelUtils.buildExportedTables(
-                settings.exportSettings.clusterInfo, settings.exportSettings.credentials, settings)
+                settings.exportSettings.clusterInfo,
+                settings.exportSettings.credentials,
+                settings.exportSettings.tlsSettings,
+                settings)
             .stream()
             .map(exportedTable -> new TableScriptGenerator(exportedTable, settings))
             .collect(Collectors.toList());

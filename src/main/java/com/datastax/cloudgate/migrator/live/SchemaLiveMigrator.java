@@ -66,7 +66,10 @@ public class SchemaLiveMigrator {
             : Executors.newFixedThreadPool(settings.maxConcurrentOps);
     migrators =
         ModelUtils.buildExportedTables(
-                settings.exportSettings.clusterInfo, settings.exportSettings.credentials, settings)
+                settings.exportSettings.clusterInfo,
+                settings.exportSettings.credentials,
+                settings.exportSettings.tlsSettings,
+                settings)
             .stream()
             .map(
                 exportedTable -> {
@@ -140,7 +143,9 @@ public class SchemaLiveMigrator {
   private void testTargetClusterConnectivity() {
     try (CqlSession ignored =
         SessionUtils.createSession(
-            settings.importSettings.clusterInfo, settings.importSettings.credentials)) {}
+            settings.importSettings.clusterInfo,
+            settings.importSettings.credentials,
+            settings.importSettings.tlsSettings)) {}
   }
 
   private void migrateTables(Predicate<TableLiveMigrator> filter) {

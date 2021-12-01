@@ -1,8 +1,8 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Live Migrator (embedded)" type="Application" factoryName="Application">
+  <configuration default="false" name="Live Migrator with TLS (embedded)" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator" />
-    <module name="cloud-gate-schema-migrator" />
-    <option name="PROGRAM_PARAMETERS" value="migrate-live --data-dir=target/export --table-types=all --export-host=127.0.0.1:9042 --export-username=cassandra --export-password=cassandra --import-host=127.0.1.1:9042 --import-username=cassandra --import-password --dsbulk-use-embedded" />
+    <module name="schema-migrator" />
+    <option name="PROGRAM_PARAMETERS" value="migrate-live --data-dir=target/export --table-types=all --export-host=54.86.46.245:9042 --export-username=cassandra --export-password=cassandra --export-use-tls --export-tls-truststore-path=$USER_HOME$/proxy_tls_tests/test_jks.jks --export-tls-truststore-password=mypassword --import-host=54.86.46.245:9042 --import-username=cassandra --import-password=cassandra --dsbulk-use-embedded" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

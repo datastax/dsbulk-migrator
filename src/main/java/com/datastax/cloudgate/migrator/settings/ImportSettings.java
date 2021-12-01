@@ -118,6 +118,69 @@ public class ImportSettings {
     }
   }
 
+//  @ArgGroup(multiplicity = "1")
+  public ImportTlsSettings tlsSettings;
+
+  public static class ImportTlsSettings implements TlsSettings {
+
+//    @Option(
+//        names = "--import-use-tls",
+//        paramLabel = "BOOLEAN",
+//        description =
+//            "Whether TLS be used when connecting to the target cluster. If left to default or set to false, all other TLS-related parameters are ignored.",
+//        required = false,
+//        defaultValue = "false")
+    public boolean useTls = false;
+
+//    @Option(
+//        names = "--import-tls-truststore-path",
+//        paramLabel = "STRING",
+//        description =
+//            "Path of the truststore to connect to the target cluster. Only relevant when connecting to a cluster requiring TLS.")
+    public String truststorePath = "";
+
+//    @Option(
+//        names = "--import-tls-truststore-password",
+//        paramLabel = "STRING",
+//        description =
+//            "The password of the truststore used to connect to the target cluster.  Only relevant when connecting to a cluster requiring TLS."
+//                + "Should only be provided if specifying a password-protected truststore. "
+//                + "Omit the parameter value to be prompted for the password interactively. "
+//                + "If the truststore does not require a password, when prompted for it just press enter",
+//        required = false,
+//        prompt = "Enter the password for the truststore to connect the target cluster: ",
+//        interactive = true)
+    public char[] truststorePassword;
+
+//    @Option(
+//        names = "--import-tls-hostname-validation",
+//        paramLabel = "BOOLEAN",
+//        description =
+//            "Whether hostname validation should be performed when connecting to the target cluster. Only relevant when connecting to a cluster requiring TLS.",
+//        defaultValue = "true")
+    public boolean performHostnameValidation = true;
+
+    @Override
+    public boolean useTls() {
+      return useTls;
+    }
+
+    @Override
+    public String getTruststorePath() {
+      return truststorePath;
+    }
+
+    @Override
+    public char[] getTruststorePassword() {
+      return truststorePassword;
+    }
+
+    @Override
+    public boolean performHostnameValidation() {
+      return performHostnameValidation;
+    }
+  }
+
   @Option(
       names = "--import-consistency",
       paramLabel = "CONSISTENCY",
