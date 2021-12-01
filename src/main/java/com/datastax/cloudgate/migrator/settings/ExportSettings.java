@@ -116,7 +116,7 @@ public class ExportSettings {
     }
   }
 
-  @ArgGroup(multiplicity = "1")
+  @ArgGroup(exclusive = false)
   public ExportTlsSettings tlsSettings;
 
   public static class ExportTlsSettings implements TlsSettings {
@@ -147,11 +147,11 @@ public class ExportSettings {
         interactive = true)
     public char[] truststorePassword;
 
-//    @Option(
-//        names = "--export-tls-hostname-validation",
-//        description =
-//            "Whether hostname validation should be performed when connecting to the origin cluster. Only relevant when connecting to a cluster requiring TLS.",
-//        defaultValue = "false")
+    @Option(
+        names = "--export-tls-hostname-validation",
+        description =
+            "Whether hostname validation should be performed when connecting to the origin cluster. Only relevant when connecting to a cluster requiring TLS.",
+        defaultValue = "false")
     public boolean performHostnameValidation = false;
 
     @Override

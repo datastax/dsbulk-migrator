@@ -78,7 +78,7 @@ public class DdlGenerationSettings implements InclusionSettings {
   @ArgGroup(exclusive = false)
   public ExportCredentials credentials;
 
-  @ArgGroup(multiplicity = "1")
+  @ArgGroup(exclusive = false)
   public ExportTlsSettings tlsSettings;
 
   @Override
