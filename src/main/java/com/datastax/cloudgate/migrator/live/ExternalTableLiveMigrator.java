@@ -19,6 +19,7 @@ import com.datastax.cloudgate.migrator.model.ExportedTable;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +37,7 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
   }
 
   @Override
-  protected ExitStatus invokeDsbulk(List<String> args) {
+  protected ExitStatus invokeDsbulk(String operationId, List<String> args) {
     try {
       ProcessBuilder builder = new ProcessBuilder();
       args.add(0, String.valueOf(settings.dsbulkCmd));
@@ -50,8 +51,8 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
       ExecutorService pool = Executors.newFixedThreadPool(2);
       ExitStatus status;
       try {
-        pool.submit(new StreamPiper(process.getInputStream(), System.out::println));
-        pool.submit(new StreamPiper(process.getErrorStream(), System.err::println));
+        pool.submit(new StreamPiper(process.getInputStream(), printTo(System.out, operationId)));
+        pool.submit(new StreamPiper(process.getErrorStream(), printTo(System.err, operationId)));
         int exitCode = process.waitFor();
         status = ExitStatus.forCode(exitCode);
       } finally {
@@ -74,6 +75,15 @@ public class ExternalTableLiveMigrator extends TableLiveMigrator {
       LOGGER.error("DSBulk invocation failed: {}", e.getMessage());
       return ExitStatus.STATUS_CRASHED;
     }
+  }
+
+  private Consumer<String> printTo(PrintStream stream, String operationId) {
+    return s -> {
+      stream.print("[DSBULK-");
+      stream.print(operationId);
+      stream.print("] ");
+      stream.println(s);
+    };
   }
 
   private static class StreamPiper implements Runnable {

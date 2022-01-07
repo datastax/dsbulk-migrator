@@ -89,7 +89,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
       LOGGER.info("Exporting {}...", exportedTable.fullyQualifiedName);
       operationId = createOperationId(true);
       List<String> args = createExportArgs(operationId);
-      ExitStatus status = invokeDsbulk(args);
+      ExitStatus status = invokeDsbulk(operationId, args);
       LOGGER.info("Export of {} finished with {}", exportedTable.fullyQualifiedName, status);
       if (status == ExitStatus.STATUS_OK) {
         createExportAckFile(operationId);
@@ -125,7 +125,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
       LOGGER.info("Importing {}...", exportedTable.fullyQualifiedName);
       operationId = createOperationId(false);
       List<String> args = createImportArgs(operationId);
-      ExitStatus status = invokeDsbulk(args);
+      ExitStatus status = invokeDsbulk(operationId, args);
       LOGGER.info("Import of {} finished with {}", exportedTable.fullyQualifiedName, status);
       if (status == ExitStatus.STATUS_OK) {
         createImportAckFile(operationId);
@@ -142,7 +142,7 @@ public abstract class TableLiveMigrator extends TableProcessor {
     return Files.exists(importAckFile);
   }
 
-  protected abstract ExitStatus invokeDsbulk(List<String> args);
+  protected abstract ExitStatus invokeDsbulk(String operationId, List<String> args);
 
   private String createOperationId(boolean export) {
     ZonedDateTime now = Instant.now().atZone(ZoneOffset.UTC);
@@ -258,6 +258,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
     args.add(String.valueOf(settings.dsbulkLogDir));
     args.add("-query");
     args.add(buildExportQuery());
+    args.add("--dsbulk.monitoring.console");
+    args.add("false");
     args.addAll(settings.exportSettings.extraDsbulkOptions);
     return args;
   }
@@ -315,6 +317,8 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add("-query");
       args.add(buildBatchImportQuery());
     }
+    args.add("--dsbulk.monitoring.console");
+    args.add("false");
     args.addAll(settings.importSettings.extraDsbulkOptions);
     return args;
   }

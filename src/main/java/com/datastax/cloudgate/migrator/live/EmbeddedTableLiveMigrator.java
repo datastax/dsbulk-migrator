@@ -25,20 +25,22 @@ import java.util.Objects;
 public class EmbeddedTableLiveMigrator extends TableLiveMigrator {
 
   private static final URL DSBULK_CONFIGURATION_FILE =
-      Objects.requireNonNull(ClassLoader.getSystemResource("logback.xml"));
+      Objects.requireNonNull(ClassLoader.getSystemResource("logback-dsbulk-embedded.xml"));
 
   public EmbeddedTableLiveMigrator(ExportedTable exportedTable, LiveMigrationSettings settings) {
     super(exportedTable, settings);
   }
 
   @Override
-  protected ExitStatus invokeDsbulk(List<String> args) {
+  protected ExitStatus invokeDsbulk(String operationId, List<String> args) {
     DataStaxBulkLoader loader = new DataStaxBulkLoader(args.toArray(new String[0]));
     int exitCode;
     LoggingUtils.configureLogging(DSBULK_CONFIGURATION_FILE);
+    System.setProperty("OPERATION_ID", operationId);
     try {
       exitCode = loader.run().exitCode();
     } finally {
+      System.clearProperty("OPERATION_ID");
       LoggingUtils.configureLogging(LoggingUtils.MIGRATOR_CONFIGURATION_FILE);
     }
     return ExitStatus.forCode(exitCode);

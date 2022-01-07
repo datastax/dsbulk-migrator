@@ -48,6 +48,8 @@ public class SessionUtils {
     DriverConfigLoader loader =
         DriverConfigLoader.programmaticBuilder()
             .withString(
+                DefaultDriverOption.SESSION_NAME, clusterInfo.isOrigin() ? "origin" : "target")
+            .withString(
                 DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, "DcInferringLoadBalancingPolicy")
             .build();
     CqlSessionBuilder builder = CqlSession.builder().withConfigLoader(loader);
