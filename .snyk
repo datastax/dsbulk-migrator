@@ -1,6 +1,16 @@
 # Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
 version: v1.22.2
-python: '3.7'
-patch: {}
 # ignores vulnerabilities until expiry date; change duration by modifying expiry date
 ignore:
+  SNYK-JAVA-COMFASTERXMLJACKSONCORE-2421244:
+    - '*':
+        reason: FedRAMP POA&M
+  SNYK-JAVA-IONETTY-1584063:
+    - '*':
+        reason: FedRAMP POA&M
+  SNYK-JAVA-IONETTY-1584064:
+    - '*':
+        reason: FedRAMP POA&M
+  SNYK-JAVA-COMGITHUBJNR-1570422:
+    - '*':
+        reason: FedRAMP POA&M
