@@ -138,6 +138,10 @@ class LiveMigrationIT extends SimulacronITBase {
         Collections.singletonList(HostAndPort.fromString(targetHost));
     settings.dsbulkEmbedded = embedded;
     settings.dsbulkLogDir = logsDir;
+    settings.importSettings.extraDsbulkOptions =
+        List.of("--datastax-java-driver.advanced.protocol.version=V3");
+    settings.exportSettings.extraDsbulkOptions =
+        List.of("--datastax-java-driver.advanced.protocol.version=V3");
     if (!embedded) {
       if (isWindows()) {
         settings.dsbulkCmd = dsbulkDir.resolve("bin").resolve("dsbulk.cmd").toString();

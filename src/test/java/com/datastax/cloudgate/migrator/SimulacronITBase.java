@@ -30,7 +30,6 @@ import com.datastax.oss.simulacron.server.BoundCluster;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
@@ -79,7 +78,7 @@ abstract class SimulacronITBase {
                 new Column("cc", DataTypes.INT),
                 new Column("v", DataTypes.INT))));
 
-    Map<String, String> columnTypes =
+    LinkedHashMap<String, String> columnTypes =
         map("pk", "int", "cc", "int", "v", "int", "v_writetime", "bigint", "v_ttl", "int");
 
     origin.prime(
@@ -97,9 +96,9 @@ abstract class SimulacronITBase {
                 new Query(
                     "INSERT INTO test.t1 (pk, cc, v) VALUES (:pk, :cc, :v) USING TIMESTAMP :v_writetime AND TTL :v_ttl",
                     Collections.emptyList(),
-                    Collections.emptyMap(),
+                    new LinkedHashMap<>(),
                     columnTypes))
-            .then(new SuccessResult(Collections.emptyList(), Collections.emptyMap())));
+            .then(new SuccessResult(Collections.emptyList(), new LinkedHashMap<>())));
   }
 
   @SuppressWarnings("deprecation")
@@ -114,11 +113,11 @@ abstract class SimulacronITBase {
   }
 
   @SuppressWarnings("unchecked")
-  static <K, V> Map<K, V> map(Object... keysAndValues) {
-    Map<Object, Object> map = new LinkedHashMap<>();
+  static <K, V> LinkedHashMap<K, V> map(Object... keysAndValues) {
+    LinkedHashMap<Object, Object> map = new LinkedHashMap<>();
     for (int i = 0; i < keysAndValues.length - 1; i += 2) {
       map.put(keysAndValues[i], keysAndValues[i + 1]);
     }
-    return (Map<K, V>) map;
+    return (LinkedHashMap<K, V>) map;
   }
 }
