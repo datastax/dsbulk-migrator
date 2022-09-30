@@ -1,4 +1,4 @@
-# CloudGate Historical Data Migrator
+# DSBulk Migrator
 
 A tool to migrate tables between two clusters, leveraging the DataStax Bulk Loader (DSBulk) to
 perform the actual data migration.
