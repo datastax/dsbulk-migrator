@@ -3,7 +3,7 @@
 A tool to migrate tables between two clusters, leveraging the DataStax Bulk Loader (DSBulk) to
 perform the actual data migration.
 
-The tool has two main commands:
+The tool provides the following main commands:
 
 * `migrate-live` starts a live data migration using a pre-existing DSBulk installation, or
   alternatively, the embedded DSBulk version. A "live" migration means that the data migration will
