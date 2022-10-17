@@ -25,7 +25,7 @@
   <root level="INFO">
     <appender-ref ref="CONSOLE"/>
   </root>
-  <logger name="com.datastax.cloudgate" level="INFO"/>
+  <logger name="com.datastax.migrator" level="INFO"/>
   <logger name="com.datastax.oss.dsbulk" level="WARN"/>
   <logger name="com.datastax.oss.driver" level="WARN"/>
   <logger name="com.datastax.dse.driver" level="WARN"/>
