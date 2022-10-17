@@ -25,11 +25,11 @@ Build is done with Maven:
 
 The build produces two distributable fat jars:
 
-* `schema-migrator-<VERSION>-embedded-driver.jar` : contains an embedded Java driver; suitable for
+* `dsbulk-migrator-<VERSION>-embedded-driver.jar` : contains an embedded Java driver; suitable for
   live migrations using an external DSBulk, or for script generation. This jar is NOT suitable for
   live migrations using an embedded DSBulk, since no DSBulk classes are present.
 
-* `schema-migrator-<VERSION>-embedded-dsbulk.jar`: contains an embedded DSBulk and an embedded Java
+* `dsbulk-migrator-<VERSION>-embedded-dsbulk.jar`: contains an embedded DSBulk and an embedded Java
   driver; suitable for all operations. Note that this jar is much bigger than the previous one, due
   to the presence of DSBulk classes.
 
@@ -47,7 +47,7 @@ tests.
 
 Launch the tool as follows:
 
-    java -jar /path/to/schema-migrator.jar (migrate-live|generate-script|generate-ddl) [OPTIONS]
+    java -jar /path/to/dsbulk-migrator.jar (migrate-live|generate-script|generate-ddl) [OPTIONS]
 
 When doing a live migration, the options are used to effectively configure DSBulk and to connect to
 the clusters.
@@ -335,13 +335,13 @@ need to be specified, unless you want to override the default value:
 
 Global help is available as follows:
 
-    java -jar /path/to/schema-migrator.jar --help
+    java -jar /path/to/dsbulk-migrator-embedded-dsbulk.jar --help
 
 This will print help about the available commands.
 
 Per-command help is available as follows:
 
-    java -jar /path/to/schema-migrator.jar COMMAND --help
+    java -jar /path/to/dsbulk-migrator-embedded-dsbulk.jar COMMAND --help
 
 This will print detailed help about the selected command along with all the available options for
 the specified command.
@@ -350,7 +350,7 @@ the specified command.
 
 Generate a migration script to migrate from an existing cluster to an Astra cluster:
 
-    java -jar target/schema-migrator-<VERSION>-embedded-driver.jar migrate-live \
+    java -jar target/dsbulk-migrator-<VERSION>-embedded-driver.jar migrate-live \
         --data-dir=/path/to/data/dir \
         --dsbulk-cmd=${DSBULK_ROOT}/bin/dsbulk \
         --dsbulk-log-dir=/path/to/log/dir \
@@ -364,7 +364,7 @@ Generate a migration script to migrate from an existing cluster to an Astra clus
 Migrate live from an existing cluster to an Astra cluster using an external DSBulk installation;
 passwords will be prompted interactively:
 
-    java -jar target/schema-migrator-<VERSION>-embedded-driver.jar migrate-live \
+    java -jar target/dsbulk-migrator-<VERSION>-embedded-driver.jar migrate-live \
         --data-dir=/path/to/data/dir \
         --dsbulk-cmd=${DSBULK_ROOT}/bin/dsbulk \
         --dsbulk-log-dir=/path/to/log/dir \
@@ -378,7 +378,7 @@ passwords will be prompted interactively:
 Migrate live from an existing cluster to an Astra cluster using the embedded DSBulk installation;
 passwords will be prompted interactively; extra DSBulk options are passed:
 
-    java -jar target/schema-migrator-<VERSION>-embedded-dsbulk.jar migrate-live \
+    java -jar target/dsbulk-migrator-<VERSION>-embedded-dsbulk.jar migrate-live \
         --data-dir=/path/to/data/dir \
         --dsbulk-use-embedded \
         --dsbulk-log-dir=/path/to/log/dir \
@@ -393,12 +393,12 @@ passwords will be prompted interactively; extra DSBulk options are passed:
         --import-dsbulk-option "--connector.csv.maxCharsPerColumn=65536" \
         --import-dsbulk-option "--executor.maxPerSecond=1000" 
 
-Note that for the last example, you must use the `schema-migrator-<VERSION>-embedded-dsbulk.jar` fat
+Note that for the last example, you must use the `dsbulk-migrator-<VERSION>-embedded-dsbulk.jar` fat
 jar, otherwise, an error will be raised because no embedded DSBulk can be found.
 
 Generate DDL files to re-create the origin schema in an Astra target cluster:
 
-    java -jar target/schema-migrator-<VERSION>-embedded-driver.jar generate-ddl \
+    java -jar target/dsbulk-migrator-<VERSION>-embedded-driver.jar generate-ddl \
         --data-dir=/path/to/data/dir \
         --export-host=my-origin-cluster.com \
         --export-username=user1 \
