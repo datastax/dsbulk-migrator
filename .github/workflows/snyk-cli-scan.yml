@@ -24,8 +24,8 @@ jobs:
       - name: prepare for snyk scan
         uses: datastax/shared-github-actions/actions/snyk-prepare@main
 
-      - name: snyk scan go
-        uses: datastax/shared-github-actions/actions/snyk-scan-go@main
+      - name: snyk scan java
+        uses: datastax/shared-github-actions/actions/snyk-scan-java@main
         with:
           java-version: 11
           directories: .
