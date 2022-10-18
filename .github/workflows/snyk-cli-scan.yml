@@ -7,6 +7,10 @@ on:
     branches: [ main ]
   workflow_dispatch:  
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   SNYK_SEVERITY_THRESHOLD_LEVEL: high
 
@@ -18,18 +22,19 @@ jobs:
         uses: actions/checkout@v2
 
       - name: prepare for snyk scan
-        uses: riptano/shared-github-actions/actions/snyk-prepare@main
+        uses: datastax/shared-github-actions/actions/snyk-prepare@main
 
-      - name: snyk scan java
-        uses: riptano/shared-github-actions/actions/snyk-scan-java@main
+      - name: snyk scan go
+        uses: datastax/shared-github-actions/actions/snyk-scan-go@main
         with:
           java-version: 11
           directories: .
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
           SNYK_ORG_ID: ${{ secrets.SNYK_ORG_ID }}
+          serivce_gh_token: ${{ secrets.GB_TOKEN }}
 
       - name: Snyk scan result
-        uses: riptano/shared-github-actions/actions/snyk-process-scan-results@main
+        uses: datastax/shared-github-actions/actions/snyk-process-scan-results@main
         with:
           gh_repo_token: ${{ secrets.GITHUB_TOKEN }}
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
