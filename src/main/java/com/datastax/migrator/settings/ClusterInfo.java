@@ -27,6 +27,8 @@ public interface ClusterInfo {
 
   Path getBundle();
 
+  String getProtocolVersion();
+
   default boolean isAstra() {
     return getBundle() != null;
   }

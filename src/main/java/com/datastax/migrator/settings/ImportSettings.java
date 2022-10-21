@@ -57,6 +57,15 @@ public class ImportSettings {
         required = true)
     public Path bundle;
 
+    @Option(
+        names = "--import-protocol-version",
+        paramLabel = "VERSION",
+        description =
+            "The protocol version to use to connect to the target cluster, e.g. 'V4'. "
+                + "If not specified, the driver will negotiate the highest version supported by both "
+                + "the client and the server.")
+    public String protocolVersion;
+
     @Override
     public boolean isOrigin() {
       return false;
@@ -78,6 +87,11 @@ public class ImportSettings {
     @Override
     public Path getBundle() {
       return bundle;
+    }
+
+    @Override
+    public String getProtocolVersion() {
+      return protocolVersion;
     }
   }
 

@@ -133,6 +133,12 @@ public class SchemaScriptGenerator {
                 ? String.valueOf(settings.exportSettings.credentials.password)
                 : "")
             + "}\"");
+    writer.println(
+        "protocol_version=\"${MIGRATOR_EXPORT_PROTOCOL_VERSION:-"
+            + (settings.exportSettings.clusterInfo.protocolVersion != null
+                ? settings.exportSettings.clusterInfo.protocolVersion
+                : "")
+            + "}\"");
     writer.println("dsbulk_cmd=\"${MIGRATOR_EXPORT_CMD:-" + settings.dsbulkCmd + "}\"");
     writer.println("dsbulk_logs=\"${MIGRATOR_EXPORT_LOG_DIR:-" + settings.dsbulkLogDir + "}\"");
     writer.println("data_dir=\"${MIGRATOR_EXPORT_DATA_DIR:-" + settings.dataDir + "}\"");
@@ -190,6 +196,12 @@ public class SchemaScriptGenerator {
             + (settings.importSettings.credentials != null
                 ? String.valueOf(settings.importSettings.credentials.password)
                 : "")
+            + "}\"");
+    writer.println(
+        "protocol_version=\"${MIGRATOR_IMPORT_PROTOCOL_VERSION:-"
+            + (settings.importSettings.clusterInfo.protocolVersion != null
+            ? settings.importSettings.clusterInfo.protocolVersion
+            : "")
             + "}\"");
     writer.println("dsbulk_cmd=\"${MIGRATOR_IMPORT_CMD:-" + settings.dsbulkCmd + "}\"");
     writer.println("dsbulk_logs=\"${MIGRATOR_IMPORT_LOG_DIR:-" + settings.dsbulkLogDir + "}\"");

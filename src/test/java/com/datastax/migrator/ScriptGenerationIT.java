@@ -94,6 +94,8 @@ class ScriptGenerationIT extends SimulacronITBase {
         Collections.singletonList(HostAndPort.fromString(originHost));
     settings.importSettings.clusterInfo.hostsAndPorts =
         Collections.singletonList(HostAndPort.fromString(targetHost));
+    settings.importSettings.clusterInfo.protocolVersion = "V4";
+    settings.exportSettings.clusterInfo.protocolVersion = "V4";
     settings.dsbulkLogDir = logsDir;
     return settings;
   }

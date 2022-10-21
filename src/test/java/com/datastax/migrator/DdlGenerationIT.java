@@ -113,6 +113,7 @@ class DdlGenerationIT extends SimulacronITBase {
         Collections.singletonList(HostAndPort.fromString(originHost));
     settings.clusterInfo.hostsAndPorts =
         Collections.singletonList(HostAndPort.fromString(targetHost));
+    settings.clusterInfo.protocolVersion = "V4";
     return settings;
   }
 }
