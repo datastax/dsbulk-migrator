@@ -25,7 +25,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>11</maven.compiler.source>
     <maven.compiler.target>11</maven.compiler.target>
-    <driver.version>4.14.1</driver.version>
+    <driver.version>4.15.0</driver.version>
     <dsbulk.version>1.10.0</dsbulk.version>
   </properties>
   <dependencies>
