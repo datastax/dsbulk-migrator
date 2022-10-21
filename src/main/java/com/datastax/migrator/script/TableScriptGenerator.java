@@ -79,6 +79,7 @@ public class TableScriptGenerator extends TableProcessor {
     }
     writer.println("    $([[ -z \"$username\" ]] || echo \"-u \\\"${username}\\\"\") \\");
     writer.println("    $([[ -z \"$password\" ]] || echo \"-p \\\"${password}\\\"\") \\");
+    writer.println("    $([[ -z \"$protocol_version\" ]] || echo \"--driver.advanced.protocol.version \\\"${protocol_version}\\\"\") \\");
     writer.println("    -url " + tableDataDir + " \\");
     writer.println("    -maxRecords \"$max_records\" \\");
     writer.println("    -maxConcurrentFiles \"$max_concurrent_files\" \\");
@@ -150,6 +151,7 @@ public class TableScriptGenerator extends TableProcessor {
     }
     writer.println("    $([[ -z \"$username\" ]] || echo \"-u \\\"${username}\\\"\") \\");
     writer.println("    $([[ -z \"$password\" ]] || echo \"-p \\\"${password}\\\"\") \\");
+    writer.println("    $([[ -z \"$protocol_version\" ]] || echo \"--driver.advanced.protocol.version \\\"${protocol_version}\\\"\") \\");
     writer.println("    -url " + tableDataDir + " \\");
     writer.println("    -maxErrors \"$max_errors\" \\");
     writer.println("    -maxConcurrentFiles \"$max_concurrent_files\" \\");

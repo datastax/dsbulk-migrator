@@ -21,6 +21,7 @@ import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
+import com.datastax.oss.driver.api.core.config.ProgrammaticDriverConfigLoaderBuilder;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
@@ -45,30 +46,35 @@ public class SessionUtils {
 
   private static CqlSessionBuilder createSessionBuilder(
       ClusterInfo clusterInfo, Credentials credentials) {
-    DriverConfigLoader loader =
+    ProgrammaticDriverConfigLoaderBuilder configLoaderBuilder =
         DriverConfigLoader.programmaticBuilder()
             .withString(
                 DefaultDriverOption.SESSION_NAME, clusterInfo.isOrigin() ? "origin" : "target")
             .withString(
-                DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, "DcInferringLoadBalancingPolicy")
-            .build();
-    CqlSessionBuilder builder = CqlSession.builder().withConfigLoader(loader);
+                DefaultDriverOption.LOAD_BALANCING_POLICY_CLASS, "DcInferringLoadBalancingPolicy");
+    if (clusterInfo.getProtocolVersion() != null) {
+      configLoaderBuilder =
+          configLoaderBuilder.withString(
+              DefaultDriverOption.PROTOCOL_VERSION, clusterInfo.getProtocolVersion());
+    }
+    DriverConfigLoader configLoader = configLoaderBuilder.build();
+    CqlSessionBuilder sessionBuilder = CqlSession.builder().withConfigLoader(configLoader);
     if (clusterInfo.isAstra()) {
-      builder.withCloudSecureConnectBundle(clusterInfo.getBundle());
+      sessionBuilder.withCloudSecureConnectBundle(clusterInfo.getBundle());
     } else {
       List<InetSocketAddress> contactPoints = clusterInfo.getContactPoints();
-      builder.addContactPoints(contactPoints);
+      sessionBuilder.addContactPoints(contactPoints);
       // limit connectivity to just the contact points to limit network I/O
-      builder.withNodeFilter(
+      sessionBuilder.withNodeFilter(
           node -> {
             SocketAddress address = node.getEndPoint().resolve();
             return address instanceof InetSocketAddress && contactPoints.contains(address);
           });
     }
     if (credentials != null) {
-      builder.withAuthCredentials(
+      sessionBuilder.withAuthCredentials(
           credentials.getUsername(), String.valueOf(credentials.getPassword()));
     }
-    return builder;
+    return sessionBuilder;
   }
 }

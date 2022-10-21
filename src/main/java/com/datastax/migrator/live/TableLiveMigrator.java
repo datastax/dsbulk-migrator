@@ -230,6 +230,10 @@ public abstract class TableLiveMigrator extends TableProcessor {
               .collect(Collectors.joining(","));
       args.add("[" + hosts + "]");
     }
+    if (settings.exportSettings.clusterInfo.protocolVersion != null) {
+      args.add("--driver.advanced.protocol.version");
+      args.add(settings.exportSettings.clusterInfo.protocolVersion);
+    }
     if (settings.exportSettings.credentials != null) {
       args.add("-u");
       args.add(settings.exportSettings.credentials.username);
@@ -283,6 +287,10 @@ public abstract class TableLiveMigrator extends TableProcessor {
       args.add(settings.importSettings.credentials.username);
       args.add("-p");
       args.add(String.valueOf(settings.importSettings.credentials.password));
+    }
+    if (settings.importSettings.clusterInfo.protocolVersion != null) {
+      args.add("--driver.advanced.protocol.version");
+      args.add(settings.importSettings.clusterInfo.protocolVersion);
     }
     args.add("-url");
     args.add(String.valueOf(tableDataDir));

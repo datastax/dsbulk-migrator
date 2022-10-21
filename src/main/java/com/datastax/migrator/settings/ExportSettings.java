@@ -55,6 +55,15 @@ public class ExportSettings {
         required = true)
     public Path bundle;
 
+    @Option(
+        names = "--export-protocol-version",
+        paramLabel = "VERSION",
+        description =
+            "The protocol version to use to connect to the origin cluster, e.g. 'V4'. "
+                + "If not specified, the driver will negotiate the highest version supported by both "
+                + "the client and the server.")
+    public String protocolVersion;
+
     @Override
     public boolean isOrigin() {
       return true;
@@ -76,6 +85,11 @@ public class ExportSettings {
     @Override
     public Path getBundle() {
       return bundle;
+    }
+
+    @Override
+    public String getProtocolVersion() {
+      return protocolVersion;
     }
   }
 
