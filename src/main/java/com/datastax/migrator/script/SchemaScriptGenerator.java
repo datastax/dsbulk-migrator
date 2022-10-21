@@ -200,8 +200,8 @@ public class SchemaScriptGenerator {
     writer.println(
         "protocol_version=\"${MIGRATOR_IMPORT_PROTOCOL_VERSION:-"
             + (settings.importSettings.clusterInfo.protocolVersion != null
-            ? settings.importSettings.clusterInfo.protocolVersion
-            : "")
+                ? settings.importSettings.clusterInfo.protocolVersion
+                : "")
             + "}\"");
     writer.println("dsbulk_cmd=\"${MIGRATOR_IMPORT_CMD:-" + settings.dsbulkCmd + "}\"");
     writer.println("dsbulk_logs=\"${MIGRATOR_IMPORT_LOG_DIR:-" + settings.dsbulkLogDir + "}\"");
