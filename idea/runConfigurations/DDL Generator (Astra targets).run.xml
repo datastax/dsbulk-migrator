@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="DDL Generator (Astra targets)" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator" />
-    <module name="cloud-gate-schema-migrator" />
+    <option name="MAIN_CLASS_NAME" value="com.datastax.migrator.DSBulkMigrator" />
+    <module name="dsbulk-migrator" />
     <option name="PROGRAM_PARAMETERS" value="generate-ddl --data-dir=target/export --export-host=127.0.0.1:9042 --export-username=cassandra --export-password=s3cr3t --optimize-for-astra" />
     <method v="2">
       <option name="Make" enabled="true" />
