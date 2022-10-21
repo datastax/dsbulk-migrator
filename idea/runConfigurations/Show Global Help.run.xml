@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Show Global Help" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="com.datastax.cloudgate.migrator.CloudGateMigrator" />
-    <module name="cloud-gate-schema-migrator" />
+    <option name="MAIN_CLASS_NAME" value="com.datastax.migrator.DSBulkMigrator" />
+    <module name="dsbulk-migrator" />
     <option name="PROGRAM_PARAMETERS" value="--help" />
     <method v="2">
       <option name="Make" enabled="true" />
