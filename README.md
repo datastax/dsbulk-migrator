@@ -119,8 +119,8 @@ need to be specified, unless you want to override the default value:
                                together, or not at all.
   -h, --help                 Displays this help message.
       --import-bundle=PATH   The path to a secure connect bundle to connect to the target cluster,
-                               if that cluster is a DataStax Astra cluster. Options --export-host
-                               and --export-bundle are mutually exclusive.
+                               if that cluster is a DataStax Astra cluster. Options --import-host
+                               and --import-bundle are mutually exclusive.
       --import-consistency=CONSISTENCY
                              The consistency level to use when importing data. The default is
                                LOCAL_QUORUM.
@@ -136,7 +136,7 @@ need to be specified, unless you want to override the default value:
                              The host name or IP and, optionally, the port of a node from the
                                target cluster. If the port is not specified, it will default to
                                9042. This option can be specified multiple times. Options
-                               --export-host and --export-bundle are mutually exclusive.
+                               --import-host and --import-bundle are mutually exclusive.
       --import-max-concurrent-files=NUM|AUTO
                              The maximum number of concurrent files to read from. Must be a
                                positive number or the special value AUTO. The default is AUTO.
@@ -148,12 +148,12 @@ need to be specified, unless you want to override the default value:
                                The default is 1000. Failed records will appear in a load.bad file
                                inside the DSBulk operation directory.
       --import-password      The password to use to authenticate against the target cluster.
-                               Options --export-username and --export-password must be provided
+                               Options --import-username and --import-password must be provided
                                together, or not at all. Omit the parameter value to be prompted for
                                the password interactively.
       --import-username=STRING
                              The username to use to authenticate against the target cluster.
-                               Options --export-username and --export-password must be provided
+                               Options --import-username and --import-password must be provided
                                together, or not at all.
   -k, --keyspaces=REGEX      A regular expression to select keyspaces to migrate. The default is to
                                migrate all keyspaces except system keyspaces, DSE-specific
@@ -240,8 +240,8 @@ need to be specified, unless you want to override the default value:
                                together, or not at all.
   -h, --help                 Displays this help message.
       --import-bundle=PATH   The path to a secure connect bundle to connect to the target cluster,
-                               if that cluster is a DataStax Astra cluster. Options --export-host
-                               and --export-bundle are mutually exclusive.
+                               if that cluster is a DataStax Astra cluster. Options --import-host
+                               and --import-bundle are mutually exclusive.
       --import-consistency=CONSISTENCY
                              The consistency level to use when importing data. The default is
                                LOCAL_QUORUM.
@@ -257,7 +257,7 @@ need to be specified, unless you want to override the default value:
                              The host name or IP and, optionally, the port of a node from the
                                target cluster. If the port is not specified, it will default to
                                9042. This option can be specified multiple times. Options
-                               --export-host and --export-bundle are mutually exclusive.
+                               --import-host and --import-bundle are mutually exclusive.
       --import-max-concurrent-files=NUM|AUTO
                              The maximum number of concurrent files to read from. Must be a
                                positive number or the special value AUTO. The default is AUTO.
@@ -269,12 +269,12 @@ need to be specified, unless you want to override the default value:
                                The default is 1000. Failed records will appear in a load.bad file
                                inside the DSBulk operation directory.
       --import-password      The password to use to authenticate against the target cluster.
-                               Options --export-username and --export-password must be provided
+                               Options --import-username and --import-password must be provided
                                together, or not at all. Omit the parameter value to be prompted for
                                the password interactively.
       --import-username=STRING
                              The username to use to authenticate against the target cluster.
-                               Options --export-username and --export-password must be provided
+                               Options --import-username and --import-password must be provided
                                together, or not at all.
   -k, --keyspaces=REGEX      A regular expression to select keyspaces to migrate. The default is to
                                migrate all keyspaces except system keyspaces, DSE-specific
